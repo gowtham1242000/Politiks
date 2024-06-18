@@ -13,6 +13,7 @@ router.get('/users', verifyToken, userController.getAllUsers); // List all users
 // Register and login routes (do not require token)
 router.post('/register', userController.register);
 router.post('/createUserDetails/:id', userController.createUserDetails)
+router.put('/updateUserDetails/:id', userController.updateUserDetails)
 router.post('/login', userController.login);
 
 router.get('/getInterests', userController.getInterests);
@@ -23,4 +24,9 @@ router.delete('/deleteInterest/:id', userController.deleteInterest);
 router.post('/createUserInterests/:id', userController.createUserInterests);
 router.post('/checkUsername', userController.checkUsername);
 
+//handle follower and following
+router.post('/following/:id', userController.following);
+
+//Post
+router.post('/createPost/:id', userController.createPost);
 module.exports = router;

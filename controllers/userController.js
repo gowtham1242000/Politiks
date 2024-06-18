@@ -2,6 +2,13 @@ const User = require('../models/User');
 const Interest = require('../models/Interest');
 const UserDetails = require('../models/UserDetail');
 const UserInterest = require('../models/UserInterest');
+const Following = require('../models/Following');
+
+const fs = require('fs');
+const path = require('path');
+const Post = require('../models/Post');
+
+
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'your_super_secret_key_12345';
 
@@ -32,10 +39,14 @@ exports.register = async (req, res) => {
 
 
 exports.createUserDetails = async (req, res) => {
-    const { userId, userName, role, dateOfBirth, gender, country, state } = req.body;
+    const { userName, role, dateOfBirth, gender, country, state } = req.body;
+
+    const userId = req.params.id;
 
     try {
         const user = await User.findByPk(userId);
+        console.log("user--------",user);
+        // return
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -46,10 +57,13 @@ exports.createUserDetails = async (req, res) => {
         }
 
         const status = (role === 'Follower') ? true : false;
+        console.log("user.mail------------",user.email);
+    
 
         const userDetails = await UserDetails.create({
             userId,
             userName,
+            mailId:user.email,
             role,
             dateOfBirth,
             gender,
@@ -270,7 +284,7 @@ exports.updateUser = async (req, res) => {
 
   exports.createUserInterests = async (req, res) => {
     const { interestIds } = req.body;
-    const userId =req.params.id;
+    const userId = req.params.id;
 
     try {
         // Check if user exists
@@ -287,15 +301,193 @@ exports.updateUser = async (req, res) => {
             return res.status(404).json({ message: 'One or more interests not found' });
         }
 
-        // Create user interests
+        // Update the UserDetails table
+        const userDetails = await UserDetails.findOne({ where: { userId } });
+        if (!userDetails) {
+            return res.status(404).json({ message: 'User details not found' });
+        }
+        userDetails.myInterest = interestIds;
+        await userDetails.save();
+
+        // Remove existing interests from UserInterest
+        await UserInterest.destroy({ where: { userId: userId } });
+
+        // Create new user interests
         const newUserInterests = await Promise.all(interestIds.map(async (interestId) => {
             return await UserInterest.create({
-                userId,
+                userId: userId,
                 interestId
             });
         }));
 
         res.status(201).json({ message: 'User interests created successfully', userInterests: newUserInterests });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+//handle followers and following
+
+    exports.following = async(req,res) =>{
+        console.log("req.body-------",req.body)
+    const {followerId } = req.body;
+
+    const userId = req.params.id;
+  
+    try {
+      // Create a new following relationship
+      const newFollowing = await Following.create({ userId, followerId });
+  
+      res.status(201).json({ message: 'User followed successfully', following: newFollowing });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  };
+
+
+  
+  const saveImage = (file, userId) => {
+    const userDir = path.join('/etc/ec/data/post', userId.toString());
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true });
+    }
+  
+    const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
+    fs.writeFileSync(filePath, file.data);
+    return filePath;
+  };
+  
+  exports.createPost = async (req, res) => {
+    const { tagUser, caption } = req.body;
+    const userId = req.params.id;
+    const image = req.files && req.files.image;
+    const location ="kochi";
+  
+    try {
+      const post = await Post.create({ userId, location, tagUser, caption });
+  
+      if (image && image.name && image.data) {
+        const imagePath = saveImage(image, userId);
+  
+        // Construct the URL for the image
+        const imageUrl = `https://salesman.aindriya.co.in/post/${userId}/${image.name.replace(/\s+/g, '_')}`;
+        post.image = imageUrl;
+        await post.save();
+      } else {
+        console.error('Invalid image file:', image);
+      }
+  
+      res.status(201).json({ message: 'Post created successfully', post });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  };
+
+
+  //handle updateUserDetails
+
+//   const userProfileDir = '/etc/ec/data/UserProfile'; // Define the directory to store profile images
+// const userBannerDir = '/etc/ec/data/UserBanner'; // Define the directory to store banner images
+
+// // Ensure the directories exist
+// if (!fs.existsSync(userProfileDir)) {
+//     fs.mkdirSync(userProfileDir, { recursive: true });
+// }
+
+// if (!fs.existsSync(userBannerDir)) {
+//     fs.mkdirSync(userBannerDir, { recursive: true });
+// }
+
+const userProfileDir = '/etc/ec/data/UserProfile'; // Define the directory to store profile images
+const userBannerDir = '/etc/ec/data/UserBanner'; // Define the directory to store profile banners
+
+// Ensure the directories exist
+if (!fs.existsSync(userProfileDir)) {
+    fs.mkdirSync(userProfileDir, { recursive: true });
+}
+if (!fs.existsSync(userBannerDir)) {
+    fs.mkdirSync(userBannerDir, { recursive: true });
+}
+
+// Function to save images
+const saveImages = (file, userId, dir) => {
+    const userDir = path.join(dir, userId.toString());
+    if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir, { recursive: true });
+    }
+
+    const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
+    fs.writeFileSync(filePath, file.data);
+    return filePath;
+};
+
+exports.updateUserDetails = async (req, res) => {
+    const { userName, role, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
+    const userId = req.params.id;
+
+    try {
+        const userDetails = await UserDetails.findOne({ where: { userId } });
+        if (!userDetails) {
+            return res.status(404).json({ message: 'User details not found' });
+        }
+
+        // Only update the fields that are provided
+        if (userName) userDetails.userName = userName;
+        if (role) userDetails.role = role;
+        if (dateOfBirth) userDetails.dateOfBirth = dateOfBirth;
+        if (gender) userDetails.gender = gender;
+        if (country) userDetails.country = country;
+        if (state) userDetails.state = state;
+        if (mySelf) userDetails.mySelf = mySelf;
+        if (myParty) userDetails.myParty = myParty;
+
+        // Update status based on role
+        userDetails.status = (role === 'Follower') ? true : false;
+
+        // Save profile banner if provided
+        if (req.files && req.files.userBannerProfile) {
+            const userBannerProfile = req.files.userBannerProfile;
+            const userBannerProfilePath = saveImages(userBannerProfile, userId, userBannerDir);
+
+            // Construct the URL for the banner
+            const userBannerProfileUrl = `https://yourdomain.com/UserBanner/${userId}/${userBannerProfile.name.replace(/\s+/g, '_')}`;
+            userDetails.userBannerProfile = userBannerProfileUrl;
+        }
+
+        // Save profile image if provided
+        if (req.files && req.files.userProfile) {
+            const userProfile = req.files.userProfile;
+            const userProfilePath = saveImages(userProfile, userId, userProfileDir);
+
+            // Construct the URL for the profile image
+            const userProfileUrl = `https://yourdomain.com/UserProfile/${userId}/${userProfile.name.replace(/\s+/g, '_')}`;
+            userDetails.userProfile = userProfileUrl;
+        }
+
+        // Update myInterest if provided
+        if (myInterest) {
+            const validInterests = await Interest.findAll({ where: { id: myInterest } });
+            if (validInterests.length !== myInterest.length) {
+                return res.status(400).json({ message: 'Invalid interest IDs provided' });
+            }
+
+            await UserInterest.destroy({ where: { userDetailsId: userDetails.id } }); // Remove old interests
+            await Promise.all(validInterests.map(interest => {
+                return UserInterest.create({
+                    userDetailsId: userDetails.id,
+                    interestId: interest.id
+                });
+            }));
+
+            userDetails.myInterest = myInterest;
+        }
+
+        await userDetails.save();
+
+        res.status(200).json({ message: 'User details updated successfully', userDetails });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });

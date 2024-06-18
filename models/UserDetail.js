@@ -2,6 +2,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/config'); // Adjust path as necessary
 const User = require('./User'); // Adjust path as necessary
+const Interest = require('./Interest');
 
 const UserDetails = sequelize.define('UserDetails', {
     userId: {
@@ -40,6 +41,30 @@ const UserDetails = sequelize.define('UserDetails', {
         type: DataTypes.BOOLEAN,
         allowNull: false
     },
+    mySelf:{
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    userBannerProfile:{
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    userProfile:{
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    myParty:{
+        type: DataTypes.STRING,
+        allowNull: true
+    },myInterest: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER), // Define as an array of integers
+        allowNull: false,
+        defaultValue: [] // Default value as an empty array
+    },
+    mailId:{
+        type: DataTypes.STRING,
+        allowNull: true 
+    }
 }, {
     timestamps: true
 });
