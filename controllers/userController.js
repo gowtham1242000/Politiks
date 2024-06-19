@@ -134,10 +134,21 @@ exports.checkUsername = async (req, res) => {
 exports.login = async (req, res) => {
     const { email, password } = req.body;
     console.log("Login payload:", req.body); // Log request body for debugging
+
     try {
         const user = await User.findOne({ where: { email } });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
+        }
+
+        const userId = user.id;
+        console.log("userId:", userId);
+
+        const userDetails = await UserDetails.findOne({ where: { userId } });
+        console.log("userDetails:", userDetails);
+
+        if (!userDetails) {
+            return res.status(404).json({ message: 'User details not found' });
         }
 
         // Check if the password matches
@@ -145,9 +156,9 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Check user status (only leaders need approval)
-        if (user.role === 'Leader' && !user.status) {
-            return res.status(403).json({ message: 'Leader account not approved yet' });
+        // Check user status in UserDetails
+        if (!userDetails.status) {
+            return res.status(403).json({ message: 'User account not approved yet' });
         }
 
         // Generate JWT token
@@ -163,6 +174,7 @@ exports.login = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 }
+
 // Delete user
 exports.deleteUser = async (req, res) => {
     const userId = req.params.id;

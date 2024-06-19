@@ -7,7 +7,8 @@ const JWT_SECRET = 'your_super_secret_key_12345';
 //Get api
 exports.getUserDetails = async (req,res)=>{
     try{
-    const user = await UserDetails.findAll();
+    const user = await UserDetails.findAll({where:{role:'Follower'}});
+    console.log("user-------",user);
     res.status(200).json(user)
     console.log(user);
     }catch(error){
