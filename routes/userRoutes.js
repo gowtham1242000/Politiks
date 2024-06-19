@@ -29,4 +29,10 @@ router.post('/following/:id', userController.following);
 
 //Post
 router.post('/createPost/:id', userController.createPost);
+
+//Leader verification
+router.post('/uploadVerificationFiles/:id', userController.uploadVerificationFiles)
+
 module.exports = router;
+
+

@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Interest = require('../models/Interest');
 const UserDetails = require('../models/UserDetail');
 const UserInterest = require('../models/UserInterest');
+const LeaderVerify = require('../models/LeaderVerify');
 const Following = require('../models/Following');
 
 const fs = require('fs');
@@ -488,6 +489,67 @@ exports.updateUserDetails = async (req, res) => {
         await userDetails.save();
 
         res.status(200).json({ message: 'User details updated successfully', userDetails });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+//handleing the Leader Image and Video for verification
+
+
+const userVerificationDir = '/etc/ec/data/UserVerification'; // Define the directory to store verification files
+
+// Ensure the directory exists
+if (!fs.existsSync(userVerificationDir)) {
+    fs.mkdirSync(userVerificationDir, { recursive: true });
+}
+
+// Function to save files and return their paths
+const saveFileverify = (file, userId, dir) => {
+    const userDir = path.join(dir, userId.toString());
+    if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir, { recursive: true });
+    }
+
+    const filePath = path.join(userDir, `${Date.now()}-${file.name.replace(/\s+/g, '_')}`);
+    fs.writeFileSync(filePath, file.data);
+    return filePath;
+};
+
+exports.uploadVerificationFiles = async (req, res) => {
+    const userId = req.params.id;
+    const { verificationImage, verificationVideo } = req.files;
+
+    try {
+        const leaderVerify = await User.findOne({ where: { id: userId } });
+        if (!leaderVerify) {
+            return res.status(404).json({ message: 'User verification details not found' });
+        }
+
+        let verificationImageUrl = null;
+        if (verificationImage) {
+            const verificationImagePath = saveFileverify(verificationImage, userId, userVerificationDir);
+
+            // Construct URL for verification image
+            verificationImageUrl = `https://yourdomain.com/UserVerification/${userId}/${verificationImage.name.replace(/\s+/g, '_')}`;
+        }
+
+        let verificationVideoUrl = null;
+        if (verificationVideo) {
+            const verificationVideoPath = saveFileverify(verificationVideo, userId, userVerificationDir);
+
+            // Construct URL for verification video
+            verificationVideoUrl = `https://yourdomain.com/UserVerification/${userId}/${verificationVideo.name.replace(/\s+/g, '_')}`;
+        }
+
+        const leaderVerifyCreate = await LeaderVerify.create({
+            userId,
+            verificationImage: verificationImageUrl,
+            verificationVideo: verificationVideoUrl
+        });
+
+        res.status(200).json({ message: 'Verification files uploaded successfully', leaderVerify: leaderVerifyCreate });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
