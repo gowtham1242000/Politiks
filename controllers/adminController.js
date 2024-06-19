@@ -3,9 +3,55 @@ const Interest = require('../models/Interest');
 const UserDetails = require('../models/UserDetail');
 const UserInterest = require('../models/UserInterest');
 const LeaderVerify = require('../models/LeaderVerify');
+const Admin = require('../models/Admin');
 const Following = require('../models/Following');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'your_super_secret_key_12345';
+
+
+exports.adminRegister = async (req, res) => {
+    const { email, password } = req.body;
+  
+    try {
+      // Check if admin already exists
+      const existingAdmin = await Admin.findOne({ where: { email, role: 'admin' } });
+      if (existingAdmin) {
+        return res.status(400).json({ message: 'Admin already exists' });
+      }
+  
+      // Create new admin user
+      const admin = await Admin.create({ email, password, role: 'admin' });
+  
+      res.status(201).json({ message: 'Admin registered successfully', admin });
+    } catch (error) {
+      console.error('Error registering admin:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+
+exports.adminLogin = async (req, res) => {
+    const { email, password } = req.body;
+  
+    try {
+      // Find admin user by email
+      const admin = await Admin.findOne({ where: { email, role: 'admin' } });
+      if (!admin) {
+        return res.status(404).json({ message: 'Admin not found' });
+      }
+  
+      // Compare passwords (plain text comparison for demonstration, NOT RECOMMENDED for production)
+      if (admin.password !== password) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+  
+      // Generate JWT token
+      const token = jwt.sign({ id: admin.id, email: admin.email }, JWT_SECRET, { expiresIn: '1h' });
+      res.status(200).json({ message: 'Login successful', token });
+    } catch (error) {
+      console.error('Error logging in admin:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
 
 //Get api
 exports.getUserDetails = async (req,res)=>{

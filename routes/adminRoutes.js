@@ -9,6 +9,10 @@ router.get('/getInterests', adminController.getInterests);
 router.get('/getLeaderDetails', adminController.getLeaderDetails);
 
 
+router.post('/adminRegister', adminController.adminRegister);
+router.post('/adminLogin', adminController.adminLogin);
+
+
 
 
 module.exports = router;
