@@ -15,18 +15,20 @@ const JWT_SECRET = 'your_super_secret_key_12345';
 
 
 exports.register = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, userName } = req.body;
     try {
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        //xconst hashedPassword = await bcrypt.hash(password, 10);
+        // Assuming password hashing is not required
+        // const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await User.create({
             email,
-            password: password,
+            password, // Storing the raw password; consider hashing in a real application
+            fullName: userName || null, // Store userName if present, otherwise store null
             // role: 'User', // Default role
             // status: true  // Default status for regular users
         });
@@ -377,15 +379,16 @@ exports.updateUser = async (req, res) => {
     const userId = req.params.id;
     const image = req.files && req.files.image;
     const location ="kochi";
-  
+
+  console.log("image---------------",image)
     try {
       const post = await Post.create({ userId, location, tagUser, caption });
-  
+console.log("post-----",post)  
       if (image && image.name && image.data) {
         const imagePath = saveImage(image, userId);
   
         // Construct the URL for the image
-        const imageUrl = `https://salesman.aindriya.co.in/post/${userId}/${image.name.replace(/\s+/g, '_')}`;
+        const imageUrl = `https://politiks.aindriya.co.uk/post/${userId}/${image.name.replace(/\s+/g, '_')}`;
         post.image = imageUrl;
         await post.save();
       } else {
@@ -544,7 +547,7 @@ exports.uploadVerificationFiles = async (req, res) => {
             const verificationImagePath = saveFileverify(verificationImage, userId, userVerificationDir);
 
             // Construct URL for verification image
-            verificationImageUrl = `https://yourdomain.com/UserVerification/${userId}/${verificationImage.name.replace(/\s+/g, '_')}`;
+            verificationImageUrl =`https://politiks.aindriya.co.uk/${userId}/${verificationImage.name.replace(/\s+/g, '_')}`;
         }
 
         let verificationVideoUrl = null;
@@ -552,7 +555,7 @@ exports.uploadVerificationFiles = async (req, res) => {
             const verificationVideoPath = saveFileverify(verificationVideo, userId, userVerificationDir);
 
             // Construct URL for verification video
-            verificationVideoUrl = `https://yourdomain.com/UserVerification/${userId}/${verificationVideo.name.replace(/\s+/g, '_')}`;
+            verificationVideoUrl = `https://politiks.aindriya.co.uk/${userId}/${verificationVideo.name.replace(/\s+/g, '_')}`;
         }
 
         const leaderVerifyCreate = await LeaderVerify.create({
