@@ -65,6 +65,7 @@ const UserDetails = sequelize.define('UserDetails', {
         type: DataTypes.STRING,
         allowNull: true 
     }
+    
 }, {
     timestamps: true
 });
