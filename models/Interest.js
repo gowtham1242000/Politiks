@@ -10,6 +10,10 @@ const Interest = sequelize.define('Interest', {
   name: {
     type: DataTypes.STRING,
     allowNull: false
+  },
+  status: {
+   type: DataTypes.BOOLEAN,
+    allowNull: false
   }
 });
 

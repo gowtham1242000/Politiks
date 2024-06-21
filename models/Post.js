@@ -1,7 +1,8 @@
 // models/Post.js
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/config');
-
+const User = require('./User');
+const UserDetails = require('./UserDetail');
 const Post = sequelize.define('Post', {
   userId: {
     type: DataTypes.INTEGER,
@@ -24,5 +25,9 @@ const Post = sequelize.define('Post', {
     allowNull: true,
   },
 });
+
+
+
+Post.belongsTo(User,{foreignKey: 'userId', targetKey: 'id'});
 
 module.exports = Post;

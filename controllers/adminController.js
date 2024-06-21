@@ -7,7 +7,7 @@ const Admin = require('../models/Admin');
 const Following = require('../models/Following');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'your_super_secret_key_12345';
-
+const AdminSetting = require('../models/AdminSetting');
 
 exports.adminRegister = async (req, res) => {
     const { email, password } = req.body;
@@ -80,9 +80,9 @@ exports.getInterests = async (req, res) => {
 
 
 exports.CreateInterest = async (req, res) => {
-    const { name } = req.body;
+    const { name, status } = req.body;
     try {
-      const interest = await Interest.create({ name});
+      const interest = await Interest.create({ name, status});
       res.status(201).json(interest);
     } catch (error) {
         console.log("error------",error)
@@ -121,4 +121,133 @@ exports.CreateInterest = async (req, res) => {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
+};
+
+exports.updateUserDetails = async (req, res) => {
+console.log("req.body-------------",req.body)
+  const { status } = req.body;
+  const userId = req.params.id;
+
+  try {
+    // Check if the user exists and fetch their details
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Fetch user details by userId
+    const userDetails = await UserDetails.findOne({ where: { userId } });
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    // Update status and action based on the role
+    if (userDetails.role === 'Leader') {
+      userDetails.status = status;
+      userDetails.action = status ? 'Approved' : 'Declined'; // Update action based on status
+      await userDetails.save();
+
+      return res.status(200).json({ message: 'User details updated successfully', userDetails });
+    } else {
+      return res.status(403).json({ message: 'You do not have permission to update status for this user' });
+    }
+  } catch (error) {
+    console.error('Error updating user details:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+exports.getApprovedLeaders = async(req,res) =>{  
+try {
+    const leaderUserDetails = await UserDetails.findAll({
+      where: {
+        role: 'Leader',
+        status: true
+      }
+    });
+
+    res.status(200).json(leaderUserDetails);
+  } catch (error) {
+    console.error('Error fetching leader UserDetails:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+exports.createAdminSetting = async (req, res) => {
+  const { locationSetting, paymentGatewaySetting, forceUpdate } = req.body;
+
+  try {
+    const adminSetting = await AdminSetting.create({
+      locationSetting,
+      paymentGatewaySetting,
+      forceUpdate,
+    });
+
+    res.status(201).json(adminSetting);
+  } catch (error) {
+    console.error('Error creating AdminSetting:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get AdminSetting
+exports.getAdminSetting = async (req, res) => {
+  try {
+    const adminSetting = await AdminSetting.findOne();
+    if (!adminSetting) {
+      return res.status(404).json({ message: 'AdminSetting not found' });
+    }
+    res.status(200).json(adminSetting);
+  } catch (error) {
+    console.error('Error fetching AdminSetting:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Update AdminSetting
+exports.updateAdminSetting = async (req, res) => {
+  const { locationSetting, paymentGatewaySetting, forceUpdate } = req.body;
+
+  try {
+    let adminSetting = await AdminSetting.findOne();
+    if (!adminSetting) {
+      return res.status(404).json({ message: 'AdminSetting not found' });
+    }
+
+    // Update only the fields that are provided in the request
+    if (locationSetting) {
+      adminSetting.locationSetting = locationSetting;
+    }
+    if (paymentGatewaySetting) {
+      adminSetting.paymentGatewaySetting = paymentGatewaySetting;
+    }
+    if (forceUpdate) {
+      adminSetting.forceUpdate = forceUpdate;
+    }
+
+    await adminSetting.save();
+
+    res.status(200).json(adminSetting);
+  } catch (error) {
+    console.error('Error updating AdminSetting:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Delete AdminSetting (Optional, depending on your requirements)
+exports.deleteAdminSetting = async (req, res) => {
+  try {
+    const adminSetting = await AdminSetting.findOne();
+    if (!adminSetting) {
+      return res.status(404).json({ message: 'AdminSetting not found' });
+    }
+
+    await adminSetting.destroy();
+
+    res.status(204).json({ message: 'AdminSetting deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting AdminSetting:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };

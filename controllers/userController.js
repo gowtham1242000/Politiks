@@ -4,15 +4,17 @@ const UserDetails = require('../models/UserDetail');
 const UserInterest = require('../models/UserInterest');
 const LeaderVerify = require('../models/LeaderVerify');
 const Following = require('../models/Following');
-
+//const { Sequelize } = require('../models');
+const UserForgetOtp = require('../models/UserForgetOtp');
 const fs = require('fs');
 const path = require('path');
 const Post = require('../models/Post');
 
+const { generateOTP, sendOTP } = require('../middleware/otpService');
 
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'your_super_secret_key_12345';
-
+const {Sequelize} =require('sequelize')
 
 exports.register = async (req, res) => {
     const { email, password, userName } = req.body;
@@ -61,7 +63,7 @@ exports.createUserDetails = async (req, res) => {
 
         const status = (role === 'Follower') ? true : false;
         console.log("user.mail------------",user.email);
-    
+       let action = (role === 'Follower') ? 'Approved' : 'Pending'; // Set action based on role  
 
         const userDetails = await UserDetails.create({
             userId,
@@ -72,7 +74,8 @@ exports.createUserDetails = async (req, res) => {
             gender,
             country,
             state,
-            status
+            status,
+            action
         });
 
         res.status(201).json({ message: 'User details created successfully', userDetails });
@@ -80,7 +83,7 @@ exports.createUserDetails = async (req, res) => {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
-};
+  };
 
 exports.checkUsername = async (req, res) => {
     const { userName } = req.body;
@@ -177,6 +180,112 @@ exports.login = async (req, res) => {
     }
 }
 
+exports.forgetPassword = async (req, res) => {
+    const { email } = req.body;
+  
+    try {
+      // Find the user by email
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Generate OTP
+      const otp = generateOTP();
+  
+      // Save OTP and expiry time (10 minutes from now) to UserForgetOtp table
+      const otpRecord = await UserForgetOtp.findOne({ where: { userId: user.id } });
+      if (otpRecord) {
+        // Update existing record
+        otpRecord.otp = otp;
+        otpRecord.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes from now
+        await otpRecord.save();
+      } else {
+        // Create new record
+        await UserForgetOtp.create({
+          userId: user.id,
+          otp,
+          otpExpires: Date.now() + 10 * 60 * 1000, // 10 minutes from now
+        });
+      }
+  
+      // Send OTP to user's email
+      await sendOTP(email, otp);
+  
+      res.status(200).json({ message: 'OTP sent to your email',user });
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+
+
+
+  exports.verifyOtp = async (req, res) => {
+    const { email, otp } = req.body;
+  
+    try {
+      // Find the user by email
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Find OTP record for the user
+      const otpRecord = await UserForgetOtp.findOne({ where: { userId: user.id } });
+      if (!otpRecord) {
+        return res.status(404).json({ message: 'OTP record not found' });
+      }
+  
+      // Verify OTP
+      const isOTPValid = otp === otpRecord.otp; // Simple comparison for demonstration
+      if (!isOTPValid) {
+        return res.status(400).json({ message: 'Invalid OTP' });
+      }
+  
+      // Check OTP expiry
+      const currentTime = Date.now();
+      if (currentTime > otpRecord.otpExpires) {
+        return res.status(400).json({ message: 'OTP expired' });
+      }
+  
+      // If OTP is valid and not expired, you can proceed with further actions
+      // For example, reset password or redirect to a password reset form
+  
+      res.status(200).json({ message: 'OTP verified successfully',user });
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+
+  exports.createPassword = async (req, res) => {
+    const { email, password } = req.body;
+  
+    try {
+      // Find the user by email
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Update user's password
+      user.password = password;
+      await user.save();
+  
+      // Delete the OTP record
+      await UserForgetOtp.destroy({ where: { userId: user.id } });
+  
+      res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Error updating password:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+
+
+
+
 // Delete user
 exports.deleteUser = async (req, res) => {
     const userId = req.params.id;
@@ -197,6 +306,7 @@ exports.deleteUser = async (req, res) => {
 }
 
 // Get user details
+/*
 exports.getUser = async (req, res) => {
     const userId = req.params.id;
 
@@ -212,6 +322,25 @@ exports.getUser = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 }
+*/
+exports.getUser = async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const user = await User.findByPk(userId, {
+      include: UserDetails, // Include UserDetails association
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 // List all users
 exports.getAllUsers = async (req, res) => {
@@ -361,7 +490,66 @@ exports.updateUser = async (req, res) => {
     }
   };
 
+/*
+exports.getFollowingList = async (req, res) => {
+  const userId = req.params.id; // Assuming userId is passed in the headers
 
+  try {
+    // Find all entries in Following table where userId matches the provided userId
+    const followingList = await Following.findAll({
+      where: {
+        userId: userId,
+      },
+      attributes: ['followerId'], // Specify the attributes you want to retrieve
+    });
+
+    if (!followingList) {
+      return res.status(404).json({ message: 'No following found for the user' });
+    }
+
+    // Extract followerIds from followingList
+    const followerIds = followingList.map(entry => entry.followerId);
+
+    res.json({ followingList: followerIds });
+  } catch (error) {
+    console.error('Error fetching following list:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+
+exports.getFollowingList = async (req, res) => {
+  const userId = req.params.id; // Assuming userId is passed in the headers
+
+  try {
+    // Find all entries in Following table where userId matches the provided userId
+    const followingList = await Following.findAll({
+      where: {
+        userId: userId,
+      },
+      attributes: ['followerId'], // Specify the attributes you want to retrieve
+    });
+
+    if (!followingList) {
+      return res.status(404).json({ message: 'No following found for the user' });
+    }
+
+    // Extract followerIds from followingList
+    const followerIds = followingList.map(entry => entry.followerId);
+
+    // Count the number of followers for each user
+    const followerCount = await Following.count({
+      where: {
+        userId: userId,
+      },
+    });
+
+    res.json({ followingList: followerIds, followerCount: followerCount });
+  } catch (error) {
+    console.error('Error fetching following list:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
   
   const saveImage = (file, userId) => {
     const userDir = path.join('/etc/ec/data/post', userId.toString());
@@ -402,20 +590,150 @@ console.log("post-----",post)
     }
   };
 
+/*exports.getAllPost =async (req,res)=>{
+    try{
 
+        const post =await Post.findAll();
+        console.log("post--------",post);
+        res.status(200).json(post)
+
+    }catch(error){
+        res.status(500).json({message:'Internal server Error'})
+    }
+  }
+*/
+
+/*exports.getAllPost = async (req, res) => {
+  try {
+    // Find all posts in descending order
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']] // Adjust the column name if necessary
+    });
+
+    console.log("posts--------", posts);
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};*/
+/*
+exports.getAllPost = async (req, res) => {
+    try {
+      // Step 1: Fetch all posts in descending order of createdAt
+      const posts = await Post.findAll({
+        order: [['createdAt', 'DESC']],
+      });
+  
+      // Step 2: Extract userIds from posts
+      const userIds = posts.map(post => post.userId);
+  
+      // Step 3: Fetch user details for the extracted userIds
+      const userDetails = await UserDetails.findAll({
+        where: { userId: userIds },
+        attributes: ['userId', 'userName', 'country'] // Adjust attributes as needed
+      });
+  
+      // Step 4: Combine posts and user details into a single response
+      const postsWithUserDetails = posts.map(post => {
+        const userDetail = userDetails.find(detail => detail.userId === post.userId);
+        return {
+          id: post.id,
+          userId: post.userId,
+          image: post.image,
+          location: post.location,
+          tagUser: post.tagUser,
+          caption: post.caption,
+          userDetails: userDetail // Attach user details to each post
+        };
+      });
+  
+      res.status(200).json(postsWithUserDetails);
+    } catch (error) {
+      console.error('Error fetching posts with user details:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+*/
+
+exports.getAllPost = async (req, res) => {
+  try {
+    // Step 1: Fetch all posts in descending order of createdAt
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Step 2: Extract userIds from posts
+    const userIds = posts.map(post => post.userId);
+
+    // Step 3: Fetch user details for the extracted userIds
+    const userDetails = await UserDetails.findAll({
+      where: { userId: userIds },
+    });
+
+    // Step 4: Combine posts and user details into a single response
+    const postsWithUserDetails = posts.map(post => {
+      const userDetail = userDetails.find(detail => detail.userId === post.userId);
+      return {
+        id: post.id,
+        userId: post.userId,
+        image: post.image,
+        location: post.location,
+        tagUser: post.tagUser,
+        caption: post.caption,
+        userDetails: userDetail // Attach user details to each post
+      };
+    });
+
+    res.status(200).json(postsWithUserDetails);
+  } catch (error) {
+    console.error('Error fetching posts with user details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.getUserList = async (req, res) => {
+  const userId = req.params.id; // Assuming the userId is passed in the headers
+
+  try {
+    // Fetch all users except the one with the specified userId
+    const users = await UserDetails.findAll({
+      where: {
+        userId: {
+          [Sequelize.Op.ne]: userId
+        }
+      },
+      attributes: ['userId', 'userName', 'country', 'userProfile'] // Specify the attributes you want to retrieve
+    });
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'No users found' });
+    }
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/*exports.getAllPost = async (req, res) => {
+  try {
+    // Fetch all posts along with user details
+    const posts = await Post.findAll({
+      include: [{
+        model: UserDetails,
+        attributes: ['id', 'userName', 'role', 'dateOfBirth', 'gender', 'country', 'state', 'status', 'action', 'mySelf', 'userBannerProfile', 'userProfile', 'myParty', 'myInterest', 'mailId'], // Specify the attributes you want to retrieve from UserDetails
+      }],
+    });
+
+    console.log("posts--------", posts);
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};*/
   //handle updateUserDetails
-
-//   const userProfileDir = '/etc/ec/data/UserProfile'; // Define the directory to store profile images
-// const userBannerDir = '/etc/ec/data/UserBanner'; // Define the directory to store banner images
-
-// // Ensure the directories exist
-// if (!fs.existsSync(userProfileDir)) {
-//     fs.mkdirSync(userProfileDir, { recursive: true });
-// }
-
-// if (!fs.existsSync(userBannerDir)) {
-//     fs.mkdirSync(userBannerDir, { recursive: true });
-// }
 
 const userProfileDir = '/etc/ec/data/UserProfile'; // Define the directory to store profile images
 const userBannerDir = '/etc/ec/data/UserBanner'; // Define the directory to store profile banners
@@ -527,7 +845,7 @@ const saveFileverify = (file, userId, dir) => {
         fs.mkdirSync(userDir, { recursive: true });
     }
 
-    const filePath = path.join(userDir, `${Date.now()}-${file.name.replace(/\s+/g, '_')}`);
+    const filePath = path.join(userDir, `${file.name.replace(/\s+/g, '_')}`);
     fs.writeFileSync(filePath, file.data);
     return filePath;
 };
@@ -547,7 +865,7 @@ exports.uploadVerificationFiles = async (req, res) => {
             const verificationImagePath = saveFileverify(verificationImage, userId, userVerificationDir);
 
             // Construct URL for verification image
-            verificationImageUrl =`https://politiks.aindriya.co.uk/${userId}/${verificationImage.name.replace(/\s+/g, '_')}`;
+            verificationImageUrl =`https://politiks.aindriya.co.uk/UserVerification/${userId}/${verificationImage.name.replace(/\s+/g, '_')}`;
         }
 
         let verificationVideoUrl = null;
@@ -555,7 +873,7 @@ exports.uploadVerificationFiles = async (req, res) => {
             const verificationVideoPath = saveFileverify(verificationVideo, userId, userVerificationDir);
 
             // Construct URL for verification video
-            verificationVideoUrl = `https://politiks.aindriya.co.uk/${userId}/${verificationVideo.name.replace(/\s+/g, '_')}`;
+            verificationVideoUrl = `https://politiks.aindriya.co.uk/UserVerification/${userId}/${verificationVideo.name.replace(/\s+/g, '_')}`;
         }
 
         const leaderVerifyCreate = await LeaderVerify.create({
@@ -569,4 +887,99 @@ exports.uploadVerificationFiles = async (req, res) => {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
+};
+
+
+exports.getUserDetails = async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    // Find user details by userId
+    const userDetails = await UserDetails.findOne({
+      where: { userId:userId },
+  //    attributes: ['userId', 'userName', 'role', 'dateOfBirth', 'gender', 'country', 'state', 'status', 'action', 'mySelf', 'userBannerProfile', 'userProfile', 'myParty', 'myInterest', 'mailId'],
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    res.status(200).json( [userDetails] );
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+/*
+exports.getUserAllPostsByUserId = async (req, res) => {
+  const userId = req.params.id; // Assuming userId is passed as a route parameter
+
+  try {
+    // Find all posts for the specified userId
+    const posts = await Post.findAll({
+      where: { userId: userId }
+    });
+
+    if (!posts || posts.length === 0) {
+      return res.status(404).json({ message: 'No posts found for the user' });
+    }
+
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+
+/*exports.getUserAllPostsByUserId = async (req, res) => {
+  const userId =req.params.id; // Assuming userId is passed as a route parameter
+
+  try {
+    // Find all posts for the specified userId in descending order
+    const posts = await Post.findAll({
+      where: { userId: userId },
+      order: [['createdAt', 'DESC']] // Adjust the column name if necessary
+    });
+
+    if (!posts || posts.length === 0) {
+      return res.status(404).json({ message: 'No posts found for the user' });
+    }
+
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+*/
+
+exports.getUserAllPostsByUserId = async (req, res) => {
+console.log("get request from front end----------------");
+  const userId = parseInt(req.params.id, 10); // Convert userId to an integer
+console.log("userId-----------------",userId)
+  if (isNaN(userId)) {
+    // If userId is not a valid integer, return a 400 response
+    return res.status(400).json({ message: 'Invalid userId' });
+  }
+
+  try {
+    // Find all posts for the specified userId in descending order
+    const posts = await Post.findAll({
+      where: { userId: userId },
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (!posts || posts.length === 0) {
+      return res.status(404).json({ message: 'No posts found for the user' });
+    }
+
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };

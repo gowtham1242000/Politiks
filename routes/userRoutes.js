@@ -7,8 +7,8 @@ const { verifyToken } = require('../middleware/auth');
 // CRUD operations for user management
 router.put('/users/:id', verifyToken, userController.updateUser); // Update user details (Admin only)
 router.delete('/users/:id', verifyToken, userController.deleteUser); // Delete user (Admin only)
-router.get('/users/:id', verifyToken, userController.getUser); // Get user details (Admin only)
-router.get('/users', verifyToken, userController.getAllUsers); // List all users (Admin only)
+router.get('/getuser/:id', userController.getUser); // Get user details (Admin only)
+router.get('/users', userController.getAllUsers); // List all users (Admin only)
 
 // Register and login routes (do not require token)
 router.post('/register', userController.register);
@@ -24,14 +24,25 @@ router.delete('/deleteInterest/:id', userController.deleteInterest);
 router.post('/createUserInterests/:id', userController.createUserInterests);
 router.post('/checkUsername', userController.checkUsername);
 
+router.post('/forgetPassword', userController.forgetPassword);
+router.post('/verifyOtp', userController.verifyOtp);
+router.post('/createPassword', userController.createPassword);
+
+
+
 //handle follower and following
 router.post('/following/:id', userController.following);
-
+router.get('/getFollowingList/:id', userController.getFollowingList);
 //Post
 router.post('/createPost/:id', userController.createPost);
-
+router.get('/getUserList/:id', userController.getUserList);
+router.get('/getAllPost', userController.getAllPost);
 //Leader verification
 router.post('/uploadVerificationFiles/:id', userController.uploadVerificationFiles)
+
+
+router.get('/getUserDetails/:id', userController.getUserDetails);
+router.get('/getUserAllPostsByUserId/:id', userController.getUserAllPostsByUserId);
 
 module.exports = router;
 

@@ -42,7 +42,7 @@ const UserDetails = sequelize.define('UserDetails', {
         allowNull: false
     },
     mySelf:{
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true
     },
     userBannerProfile:{
@@ -64,8 +64,10 @@ const UserDetails = sequelize.define('UserDetails', {
     mailId:{
         type: DataTypes.STRING,
         allowNull: true 
+    },action: {
+        type: DataTypes.STRING, // Adjust the data type as per your requirements
+        allowNull: true
     }
-    
 }, {
     timestamps: true
 });
