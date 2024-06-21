@@ -23,7 +23,10 @@ exports.register = async (req, res) => {
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
-      if (userDetails && (userDetails.action === 'Pending' || userDetails.action === 'Declined')) {
+      if (!userDetails) {
+        // User exists but no details, remove the user
+        await User.destroy({ where: { id: existingUser.id } });
+      } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
         // Remove old user and details
         await UserDetails.destroy({ where: { userId: existingUser.id } });
         await User.destroy({ where: { id: existingUser.id } });
@@ -48,8 +51,7 @@ exports.register = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
-}
-
+};
 exports.createUserDetails = async (req, res) => {
     const { userName, role, dateOfBirth, gender, country, state } = req.body;
 
