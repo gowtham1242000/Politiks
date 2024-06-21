@@ -15,6 +15,7 @@ router.post('/register', userController.register);
 router.post('/createUserDetails/:id', userController.createUserDetails)
 router.put('/updateUserDetails/:id',verifyToken, userController.updateUserDetails)
 router.post('/login', userController.login);
+router.post('/goToHome/:id', userController.goToHome);
 
 router.get('/getInterests', userController.getInterests);
 router.get('/getInterest/:id',userController.getInterest);
