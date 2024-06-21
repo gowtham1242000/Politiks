@@ -215,31 +215,64 @@ exports.login = async (req, res) => {
     }
 }
 
+// exports.goToHome = async (req, res) => {
+//   const userId = req.params.id; // Correctly access userId from req.params
+
+//   try {
+//       const user = await User.findOne({ where: { id: userId } });
+
+//       if (!user) {
+//           return res.status(404).json({ message: 'User not found' });
+//       }
+
+//       // Assuming you have a method to validate password
+//       // if (!user.validPassword(user.password)) {
+//       //     return res.status(401).json({ message: 'Invalid password' });
+//       // }
+
+//       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+//       user.token = token;
+//       await user.save();
+
+//       res.status(200).json({ message: 'Login successful', token, user });
+//   } catch (error) {
+//       console.error('Error finding user:', error);
+//       res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
+
 exports.goToHome = async (req, res) => {
-  const userId = req.params.id; // Correctly access userId from req.params
+  const userId = req.params.id;
 
   try {
-      const user = await User.findOne({ where: { id: userId } });
+    const user = await User.findOne({ where: { id: userId } });
 
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-      }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-      // Assuming you have a method to validate password
-      // if (!user.validPassword(user.password)) {
-      //     return res.status(401).json({ message: 'Invalid password' });
-      // }
+    const userDetails = await UserDetails.findOne({ where: { userId: user.id } });
 
-      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-      user.token = token;
-      await user.save();
+    if (userDetails && (userDetails.action === 'Pending' || userDetails.action === 'Declined')) {
+      return res.status(400).json({ message: 'Profile not approved by admin. Please contact support.' });
+    }
 
-      res.status(200).json({ message: 'Login successful', token, user });
+    // Assuming you have a method to validate password if needed
+    // if (!user.validPassword(user.password)) {
+    //     return res.status(401).json({ message: 'Invalid password' });
+    // }
+
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    user.token = token;
+    await user.save();
+
+    res.status(200).json({ message: 'Login successful', token, user });
   } catch (error) {
-      console.error('Error finding user:', error);
-      res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error finding user:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 exports.forgetPassword = async (req, res) => {
     const { email } = req.body;
   
