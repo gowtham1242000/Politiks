@@ -17,31 +17,38 @@ const JWT_SECRET = 'your_super_secret_key_12345';
 const {Sequelize} =require('sequelize')
 
 exports.register = async (req, res) => {
-    const { email, password, userName } = req.body;
-    try {
-        const existingUser = await User.findOne({ where: { email } });
-        if (existingUser) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
+  const { email, password, userName } = req.body;
 
-        // Assuming password hashing is not required
-        // const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newUser = await User.create({
-            email,
-            password, // Storing the raw password; consider hashing in a real application
-            fullName: userName || null, // Store userName if present, otherwise store null
-            // role: 'User', // Default role
-            // status: true  // Default status for regular users
-        });
-
-        res.status(201).json({ message: 'User registered successfully', user: newUser });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal Server Error' });
+  try {
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
+      if (userDetails && (userDetails.action === 'Pending' || userDetails.action === 'Declined')) {
+        // Remove old user and details
+        await UserDetails.destroy({ where: { userId: existingUser.id } });
+        await User.destroy({ where: { id: existingUser.id } });
+      } else {
+        return res.status(400).json({ message: 'User already exists or not allowed to register' });
+      }
     }
-}
 
+    // Assuming password hashing is not required
+    // const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      email,
+      password, // Storing the raw password; consider hashing in a real application
+      fullName: userName || null, // Store userName if present, otherwise store null
+      // role: 'User', // Default role
+      // status: true  // Default status for regular users
+    });
+
+    res.status(201).json({ message: 'User registered successfully', user: newUser });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
 
 exports.createUserDetails = async (req, res) => {
     const { userName, role, dateOfBirth, gender, country, state } = req.body;
@@ -195,7 +202,7 @@ exports.goToHome = async (req, res) => {
       //     return res.status(401).json({ message: 'Invalid password' });
       // }
 
-      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
       user.token = token;
       await user.save();
 
@@ -784,7 +791,7 @@ const saveImages = (file, userId, dir) => {
 };
 
 exports.updateUserDetails = async (req, res) => {
-    const { userName, role, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
+    const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
     const userId = req.params.id;
 console.log("req.body--------",req.body);
     try {
@@ -795,7 +802,7 @@ console.log("req.body--------",req.body);
 
         // Only update the fields that are provided
         if (userName) userDetails.userName = userName;
-        if (role) userDetails.role = role;
+        //if (role) userDetails.role = role;
         if (dateOfBirth) userDetails.dateOfBirth = dateOfBirth;
         if (gender) userDetails.gender = gender;
         if (country) userDetails.country = country;
@@ -804,7 +811,7 @@ console.log("req.body--------",req.body);
         if (myParty) userDetails.myParty = myParty;
 
         // Update status based on role
-        userDetails.status = (role === 'Follower') ? true : false;
+       // userDetails.status = (role === 'Follower') ? true : false;
 
         // Save profile banner if provided
         if (req.files && req.files.userBannerProfile) {

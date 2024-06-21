@@ -41,9 +41,17 @@ const UserDetails = sequelize.define('UserDetails', {
         type: DataTypes.BOOLEAN,
         allowNull: false
     },
-    mySelf:{
+    mySelf: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: true,
+        validate: {
+            // Custom validation to limit length
+            isWithinMaxLength(value) {
+                if (value && value.length > 1000) { // Adjust 1000 characters as per your requirement
+                    throw new Error('mySelf field exceeds maximum length');
+                }
+            }
+        }
     },
     userBannerProfile:{
         type: DataTypes.STRING,
