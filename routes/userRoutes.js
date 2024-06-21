@@ -13,7 +13,7 @@ router.get('/users', userController.getAllUsers); // List all users (Admin only)
 // Register and login routes (do not require token)
 router.post('/register', userController.register);
 router.post('/createUserDetails/:id', userController.createUserDetails)
-router.put('/updateUserDetails/:id', userController.updateUserDetails)
+router.put('/updateUserDetails/:id',verifyToken, userController.updateUserDetails)
 router.post('/login', userController.login);
 
 router.get('/getInterests', userController.getInterests);

@@ -167,7 +167,7 @@ exports.login = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
         // Save token to the database
         user.token = token;
@@ -761,7 +761,7 @@ const saveImages = (file, userId, dir) => {
 exports.updateUserDetails = async (req, res) => {
     const { userName, role, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
     const userId = req.params.id;
-
+console.log("req.body--------",req.body);
     try {
         const userDetails = await UserDetails.findOne({ where: { userId } });
         if (!userDetails) {
