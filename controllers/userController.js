@@ -792,6 +792,7 @@ const saveImages = (file, userId, dir) => {
 
 exports.updateUserDetails = async (req, res) => {
     const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
+    console.log("req.body----------",req.body)
     const userId = req.params.id;
 console.log("req.body--------",req.body);
     try {
@@ -809,6 +810,7 @@ console.log("req.body--------",req.body);
         if (state) userDetails.state = state;
         if (mySelf) userDetails.mySelf = mySelf;
         if (myParty) userDetails.myParty = myParty;
+        //if(myInterest) userDetails.myInterest = myInterest;
 
         // Update status based on role
        // userDetails.status = (role === 'Follower') ? true : false;
@@ -819,7 +821,7 @@ console.log("req.body--------",req.body);
             const userBannerProfilePath = saveImages(userBannerProfile, userId, userBannerDir);
 
             // Construct the URL for the banner
-            const userBannerProfileUrl = `https://yourdomain.com/UserBanner/${userId}/${userBannerProfile.name.replace(/\s+/g, '_')}`;
+            const userBannerProfileUrl = `https://politiks.aindriya.co.uk/UserBanner/${userId}/${userBannerProfile.name.replace(/\s+/g, '_')}`;
             userDetails.userBannerProfile = userBannerProfileUrl;
         }
 
@@ -829,36 +831,43 @@ console.log("req.body--------",req.body);
             const userProfilePath = saveImages(userProfile, userId, userProfileDir);
 
             // Construct the URL for the profile image
-            const userProfileUrl = `https://yourdomain.com/UserProfile/${userId}/${userProfile.name.replace(/\s+/g, '_')}`;
+            const userProfileUrl = `https://politiks.aindriya.co.uk/UserProfile/${userId}/${userProfile.name.replace(/\s+/g, '_')}`;
             userDetails.userProfile = userProfileUrl;
         }
 
         // Update myInterest if provided
         if (myInterest) {
-            const validInterests = await Interest.findAll({ where: { id: myInterest } });
-            if (validInterests.length !== myInterest.length) {
-                return res.status(400).json({ message: 'Invalid interest IDs provided' });
-            }
-
-            await UserInterest.destroy({ where: { userDetailsId: userDetails.id } }); // Remove old interests
-            await Promise.all(validInterests.map(interest => {
-                return UserInterest.create({
-                    userDetailsId: userDetails.id,
-                    interestId: interest.id
-                });
-            }));
-
-            userDetails.myInterest = myInterest;
+          let interestArray = [];
+          try {
+            interestArray = JSON.parse(myInterest);
+          } catch (error) {
+            return res.status(400).json({ message: 'Invalid format for myInterest' });
+          }
+    
+          const validInterests = await Interest.findAll({ where: { id: interestArray } });
+          if (validInterests.length !== interestArray.length) {
+            return res.status(400).json({ message: 'Invalid interest IDs provided' });
+          }
+    
+         // await UserInterest.destroy({ where: { userDetailsId: userDetails.id } }); // Remove old interests
+          //await Promise.all(validInterests.map(interest => {
+          //   return UserInterest.create({
+          //     userDetailsId: userDetails.id,
+          //     interestId: interest.id
+          //   });
+          // }));
+    
+          userDetails.myInterest = interestArray;
         }
-
+    
         await userDetails.save();
-
+    
         res.status(200).json({ message: 'User details updated successfully', userDetails });
-    } catch (error) {
+      } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
-    }
-};
+      }
+    };
 
 //handleing the Leader Image and Video for verification
 
