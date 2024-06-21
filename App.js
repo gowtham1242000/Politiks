@@ -13,6 +13,12 @@ const { Op } = require('sequelize');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const sequelize = require('./config/config')
+ 
+// Middleware setup
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 //const protectedRoutes = require('./routes/protectedRoutes'); // Add this line
 require('dotenv').config();
 // require('dotenv').config();
@@ -21,6 +27,10 @@ require('dotenv').config();
 db.authenticate()
   .then(() => console.log('Database connected'))
   .catch(err => console.error('Database connection error:', err));
+
+//   sequelize.sync({ force: true }).then(() => {
+//     console.log("Database & tables created!");
+//   })
 
 // Middleware
 app.use(express.json());
@@ -33,6 +43,7 @@ app.use(bodyParser.json());
 app.use(fileUpload());
 app.use('/admin', adminRoutes);
 app.use('/user', userRoutes);
+
 //app.use('/protected', protectedRoutes);
 
 

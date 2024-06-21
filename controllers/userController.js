@@ -16,49 +16,75 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'your_super_secret_key_12345';
 const {Sequelize} =require('sequelize')
 
+// Ensure your function is declared as an async function
 exports.register = async (req, res) => {
-  const { email, password, userName } = req.body;
+  const { email, password, userName, googleId } = req.body;
 
   try {
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
-      if (!userDetails) {
-        // User exists but no details, remove the user
-        await User.destroy({ where: { id: existingUser.id } });
-      } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
-        // Remove old user and details
-        await UserDetails.destroy({ where: { userId: existingUser.id } });
-        await User.destroy({ where: { id: existingUser.id } });
+      if (googleId) {
+          // Social login flow via Google OAuth
+          let user = await User.findOne({ where: { googleId } });
+
+          if (user) {
+              // User exists, handle accordingly (e.g., update user details if needed)
+              return res.status(400).json({ message: 'User already exists' });
+          }
+
+          // Create new user for Google OAuth
+          user = await User.create({
+              email,
+              fullName: userName, // Assuming userName maps to fullName
+              googleId,
+              // Add other relevant fields
+          });
+
+          // Optionally generate JWT token and respond
+          // const token = generateJWTToken(user); // Implement this function as needed
+
+          return res.json({ message: 'User registered successfully', user });
       } else {
-        return res.status(400).json({ message: 'User already exists or not allowed to register' });
+          // Normal registration flow with email and password
+          const existingUser = await User.findOne({ where: { email } });
+
+          if (existingUser) {
+              // User exists, handle accordingly (e.g., update user details if needed)
+              return res.status(400).json({ message: 'User already exists' });
+          }
+
+          // Proceed with normal registration logic
+          const newUser = await User.create({
+              email,
+              password, // Assuming password is passed correctly
+              fullName: userName || null,
+              // Add other relevant fields
+          });
+
+          // Optionally generate JWT token and respond
+          // const token = generateJWTToken(newUser); // Implement this function as needed
+
+          return res.status(201).json({ message: 'User registered successfully', user: newUser });
       }
-    }
-
-    // Assuming password hashing is not required
-    // const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await User.create({
-      email,
-      password, // Storing the raw password; consider hashing in a real application
-      fullName: userName || null, // Store userName if present, otherwise store null
-      // role: 'User', // Default role
-      // status: true  // Default status for regular users
-    });
-
-    res.status(201).json({ message: 'User registered successfully', user: newUser });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal Server Error' });
+      console.error('Error processing registration or social login:', error);
+      return res.status(500).json({ message: 'Internal server error' });
   }
 };
 exports.createUserDetails = async (req, res) => {
     const { userName, role, dateOfBirth, gender, country, state } = req.body;
 
     const userId = req.params.id;
+    console.log("userId",userId);
 
     try {
-        const user = await User.findByPk(userId);
+      const id =userId ;
+      console.log("id----",id) // Replace with the actual userId you want to find
+
+      const user = await User.findOne({
+          where: {
+              id: id
+          }
+      });
+      
         console.log("user--------",user);
         // return
         if (!user) {
@@ -182,7 +208,7 @@ exports.login = async (req, res) => {
         user.token = token;
         await user.save();
 
-        res.status(200).json({ message: 'Login successful', token });
+        res.status(200).json({ message: 'Login successful', token , user});
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });

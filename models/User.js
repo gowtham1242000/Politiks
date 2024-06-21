@@ -1,5 +1,3 @@
-// models/User.js
-
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/config');
 
@@ -13,52 +11,24 @@ User.init({
     },
     password: {
         type: DataTypes.STRING,
-        allowNull: false,
-   },
-   fullName: {
-     type: DataTypes.STRING,
+        allowNull: true, // Allow null for social logins
+    },
+    fullName: {
+        type: DataTypes.STRING,
         allowNull: true,
-  },
-//     role: {
-//         type: DataTypes.STRING,
-//         allowNull: false,
-//     },
-//     status: {
-//         type: DataTypes.BOOLEAN,
-//         defaultValue: true,
-//     },
-//     uniqueName: {
-//         type: DataTypes.STRING,
-//     },
-//     iam: {
-//         type: DataTypes.STRING,
-//     },
-//     dateOfBirth: {
-//         type: DataTypes.DATE,
-//     },
-//     gender: {
-//         type: DataTypes.STRING,
-//     },
-//     country: {
-//         type: DataTypes.STRING,
-//     },
-//     state: {
-//         type: DataTypes.STRING,
-//     },
-//     interests: {
-//         type: DataTypes.ARRAY(DataTypes.STRING),
-//     },
-//     accountsToFollow: {
-//         type: DataTypes.ARRAY(DataTypes.STRING),
-//     },
+    },
+    googleId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+    },
     token: {
         type: DataTypes.STRING,
-    }
-// },
-  },{
+        allowNull: true,
+    },
+}, {
     sequelize,
     modelName: 'User',
 });
-
 
 module.exports = User;
