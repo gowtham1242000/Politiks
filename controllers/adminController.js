@@ -8,6 +8,61 @@ const Following = require('../models/Following');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'your_super_secret_key_12345';
 const AdminSetting = require('../models/AdminSetting');
+const Country = require('../models/Country');
+const State = require('../models/State');
+
+
+exports.createCountry= async (req,res)=>{
+  try {
+    const country = await Country.create(req.body);
+    res.status(201).json(country);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+}
+
+exports.createState = async (req,res)=>{
+  const { countryId } = req.params.id;
+    const { name } = req.body;
+
+    try {
+        // Check if the country exists
+        const country = await Country.findByPk(countryId);
+        if (!country) {
+            return res.status(404).json({ message: 'Country not found' });
+        }
+
+        const state = await State.create({ name, countryId });
+        res.status(201).json(state);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+exports.bulkCreateState = async (req,res) =>{
+  const  countryId  = req.params.id;
+    const { states } = req.body; // Assuming states is an array of state names
+
+    try {
+        // Check if the country exists
+        const country = await Country.findOne({where:{id:countryId}});
+        if (!country) {
+            return res.status(404).json({ message: 'Country not found' });
+        }
+
+        const stateData = states.map(stateName => ({
+            name: stateName,
+            countryId,
+        }));
+
+        const createdStates = await State.bulkCreate(stateData);
+        res.status(201).json(createdStates);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+
 
 exports.adminRegister = async (req, res) => {
     const { email, password } = req.body;
@@ -251,3 +306,7 @@ exports.deleteAdminSetting = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
+
+

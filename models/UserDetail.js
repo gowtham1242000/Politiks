@@ -39,7 +39,8 @@ const UserDetails = sequelize.define('UserDetails', {
     },
     status: {
         type: DataTypes.BOOLEAN,
-        allowNull: false
+        allowNull: false,
+        defaultValue: false // Assuming a default value for new users
     },
     mySelf: {
         type: DataTypes.TEXT,
@@ -53,26 +54,33 @@ const UserDetails = sequelize.define('UserDetails', {
             }
         }
     },
-    userBannerProfile:{
+    userBannerProfile: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    userProfile:{
+    userProfile: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    myParty:{
+    myParty: {
         type: DataTypes.STRING,
         allowNull: true
-    },myInterest: {
+    },
+    myInterest: {
         type: DataTypes.ARRAY(DataTypes.INTEGER), // Define as an array of integers
         allowNull: false,
         defaultValue: [] // Default value as an empty array
     },
-    mailId:{
+    myInterestField: {
+        type: DataTypes.ARRAY(DataTypes.STRING), // Define as an array of strings
+        allowNull: true,
+        defaultValue: [] // Default value as an empty array
+    },
+    mailId: {
         type: DataTypes.STRING,
         allowNull: true 
-    },action: {
+    },
+    action: {
         type: DataTypes.STRING, // Adjust the data type as per your requirements
         allowNull: true
     }

@@ -10,6 +10,10 @@ const fs = require('fs');
 const path = require('path');
 const Post = require('../models/Post');
 
+const Country = require('../models/Country');
+const State = require('../models/State');
+
+
 const { generateOTP, sendOTP } = require('../middleware/otpService');
 
 const jwt = require('jsonwebtoken');
@@ -19,7 +23,7 @@ const {Sequelize} =require('sequelize')
 // Ensure your function is declared as an async function
 exports.register = async (req, res) => {
   const { email, password, userName, googleId } = req.body;
-
+console.log("req.body----",req.body)
   try {
       if (googleId) {
           // Social login flow via Google OAuth
@@ -27,11 +31,11 @@ exports.register = async (req, res) => {
 
           if (user) {
               // User exists, handle accordingly (e.g., update user details if needed)
-              return res.status(400).json({ message: 'User already exists' });
+              return res.status(200).json({ message: 'User already exists', user });
           }
 
           // Create new user for Google OAuth
-          user = await User.create({
+              user = await User.create({
               email,
               fullName: userName, // Assuming userName maps to fullName
               googleId,
@@ -42,17 +46,18 @@ exports.register = async (req, res) => {
           // const token = generateJWTToken(user); // Implement this function as needed
 
           return res.json({ message: 'User registered successfully', user });
-      } else {
+      }
+     /* else {
           // Normal registration flow with email and password
           const existingUser = await User.findOne({ where: { email } });
 
           if (existingUser) {
               // User exists, handle accordingly (e.g., update user details if needed)
-              return res.status(400).json({ message: 'User already exists' });
+              return res.status(200).json({ message: 'User already exists', user });
           }
 
           // Proceed with normal registration logic
-          const newUser = await User.create({
+              newUser = await User.create({
               email,
               password, // Assuming password is passed correctly
               fullName: userName || null,
@@ -67,6 +72,41 @@ exports.register = async (req, res) => {
   } catch (error) {
       console.error('Error processing registration or social login:', error);
       return res.status(500).json({ message: 'Internal server error' });
+  }*/
+  else {
+      // Normal registration flow with email and password
+      const existingUser = await User.findOne({ where: { email } });
+
+      if (existingUser) {
+        const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
+        if (!userDetails) {
+          // User exists but no details, remove the user
+          await User.destroy({ where: { id: existingUser.id } });
+        } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
+          // Remove old user and details
+          await UserDetails.destroy({ where: { userId: existingUser.id } });
+          await User.destroy({ where: { id: existingUser.id } });
+        } else {
+          return res.status(400).json({ message: 'User already exists or not allowed to register' });
+        }
+      }
+
+      // Proceed with normal registration logic
+      const newUser = await User.create({
+        email,
+        password, // Assuming password is passed correctly
+        fullName: userName || null,
+        // Add other relevant fields
+      });
+
+      // Optionally generate JWT token and respond
+      // const token = generateJWTToken(newUser); // Implement this function as needed
+
+      return res.status(201).json({ message: 'User registered successfully', user: newUser });
+    }
+  } catch (error) {
+    console.error('Error processing registration or social login:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 exports.createUserDetails = async (req, res) => {
@@ -851,13 +891,18 @@ const saveImages = (file, userId, dir) => {
     return filePath;
 };
 
-exports.updateUserDetails = async (req, res) => {
+/*exports.updateUserDetails = async (req, res) => {
     const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
-    console.log("req.body----------",req.body)
+   // console.log("req.body----------",req.body)
     const userId = req.params.id;
-console.log("req.body--------",req.body);
+console.log("req.body------------------*************________________----------",req.body);
+console.log("userId======================",userId)
+console.log("myInterest-------------",myInterest)
+//return
     try {
         const userDetails = await UserDetails.findOne({ where: { userId } });
+console.log("userDetails--------------",userDetails);
+//return
         if (!userDetails) {
             return res.status(404).json({ message: 'User details not found' });
         }
@@ -871,7 +916,8 @@ console.log("req.body--------",req.body);
         if (state) userDetails.state = state;
         if (mySelf) userDetails.mySelf = mySelf;
         if (myParty) userDetails.myParty = myParty;
-        //if(myInterest) userDetails.myInterest = myInterest;
+        //if (myInterest) userDetails.myInterest =myInterest;
+         //if(myInterest) userDetails.myInterest = myInterest;
 
         // Update status based on role
        // userDetails.status = (role === 'Follower') ? true : false;
@@ -929,6 +975,135 @@ console.log("req.body--------",req.body);
         res.status(500).json({ message: 'Internal Server Error' });
       }
     };
+*/
+
+/*
+exports.updateUserDetails = async (req, res) => {
+console.log("req.body---------------",req.body)
+  const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
+  const userId = req.params.id;
+ 
+console.log('myInterest------------------',myInterest);
+  try {
+      const userDetails = await UserDetails.findOne({ where: { userId } });
+      if (!userDetails) {
+          return res.status(404).json({ message: 'User details not found' });
+      }
+
+      // Only update the fields that are provided
+      if (userName) userDetails.userName = userName;
+      if (dateOfBirth) userDetails.dateOfBirth = dateOfBirth;
+      if (gender) userDetails.gender = gender;
+      if (country) userDetails.country = country;
+      if (state) userDetails.state = state;
+      if (mySelf) userDetails.mySelf = mySelf;
+      if (myParty) userDetails.myParty = myParty;
+
+      // Save profile banner if provided
+      if (req.files && req.files.userBannerProfile) {
+          const userBannerProfile = req.files.userBannerProfile;
+          const userBannerProfilePath = saveImages(userBannerProfile, userId, userBannerDir);
+          const userBannerProfileUrl = `https://politiks.aindriya.co.uk/UserBanner/${userId}/${userBannerProfile.name.replace(/\s+/g, '_')}`;
+          userDetails.userBannerProfile = userBannerProfileUrl;
+      }
+
+      // Save profile image if provided
+      if (req.files && req.files.userProfile) {
+          const userProfile = req.files.userProfile;
+          const userProfilePath = saveImages(userProfile, userId, userProfileDir);
+          const userProfileUrl = `https://politiks.aindriya.co.uk/UserProfile/${userId}/${userProfile.name.replace(/\s+/g, '_')}`;
+          userDetails.userProfile = userProfileUrl;
+      }
+
+      // Update myInterest and myInterestField if provided
+      if (myInterest) {
+          let interestArray = [];
+          try {
+              interestArray = JSON.parse(myInterest);
+          } catch (error) {
+              return res.status(400).json({ message: 'Invalid format for myInterest' });
+          }
+
+          const validInterests = await Interest.findAll({ where: { id: interestArray } });
+          if (validInterests.length !== interestArray.length) {
+              return res.status(400).json({ message: 'Invalid interest IDs provided' });
+          }
+
+          const interestNames = validInterests.map(interest => interest.name); // Assuming the Interest model has a 'name' field
+          userDetails.myInterest = interestArray;
+          userDetails.myInterestField = interestNames;
+      }
+
+      await userDetails.save();
+console.log("userDetails--------------",userDetails);
+      res.status(200).json({ message: 'User details updated successfully', userDetails });
+  } catch (error) {
+      console.error("error------------",error);
+      res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+*/
+
+exports.updateUserDetails = async (req, res) => {
+  const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
+  const userId = req.params.id;
+
+  try {
+    const userDetails = await UserDetails.findOne({ where: { userId } });
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    // Only update the fields that are provided
+    if (userName) userDetails.userName = userName;
+    if (dateOfBirth) userDetails.dateOfBirth = dateOfBirth;
+    if (gender) userDetails.gender = gender;
+    if (country) userDetails.country = country;
+    if (state) userDetails.state = state;
+    if (mySelf) userDetails.mySelf = mySelf;
+    if (myParty) userDetails.myParty = myParty;
+
+    // Save profile banner if provided
+    if (req.files && req.files.userBannerProfile) {
+      const userBannerProfile = req.files.userBannerProfile;
+      const userBannerProfilePath = saveImages(userBannerProfile, userId, userBannerDir);
+      const userBannerProfileUrl = `https://politiks.aindriya.co.uk/UserBanner/${userId}/${userBannerProfile.name.replace(/\s+/g, '_')}`;
+      userDetails.userBannerProfile = userBannerProfileUrl;
+    }
+
+    // Save profile image if provided
+    if (req.files && req.files.userProfile) {
+      const userProfile = req.files.userProfile;
+      const userProfilePath = saveImages(userProfile, userId, userProfileDir);
+      const userProfileUrl = `https://politiks.aindriya.co.uk/UserProfile/${userId}/${userProfile.name.replace(/\s+/g, '_')}`;
+      userDetails.userProfile = userProfileUrl;
+    }
+
+    // Update myInterest and myInterestField if provided
+    if (myInterest) {
+console.log("----------------",myInterest)
+      let interestArray = myInterest.split(',').map(Number); // Split the string into an array and convert to integers
+
+      const validInterests = await Interest.findAll({ where: { id: interestArray } });
+      if (validInterests.length !== interestArray.length) {
+        return res.status(400).json({ message: 'Invalid interest IDs provided' });
+      }
+
+      const interestNames = validInterests.map(interest => interest.name); // Assuming the Interest model has a 'name' field
+      userDetails.myInterest = interestArray;
+      userDetails.myInterestField = interestNames;
+    }
+
+    await userDetails.save();
+console.log("userDetails-------------",userDetails);
+    res.status(200).json({ message: 'User details updated successfully', userDetails });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
 
 //handleing the Leader Image and Video for verification
 
@@ -991,7 +1166,7 @@ exports.uploadVerificationFiles = async (req, res) => {
     }
 };
 
-
+/*
 exports.getUserDetails = async (req, res) => {
   const userId = req.params.id;
 
@@ -1013,7 +1188,44 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
+*/
 
+exports.getUserDetails = async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    // Find user details by userId
+    const userDetails = await UserDetails.findOne({
+      where: { userId: userId },
+  //    attributes: ['userId', 'userName', 'role', 'dateOfBirth', 'gender', 'country', 'state', 'status', 'action', 'mySelf', 'userBannerProfile', 'userProfile', 'myParty', 'myInterest'],
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    // Fetch fullname from User table
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ['fullName'],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Merge userDetails and user data
+    const response = {
+      ...userDetails.toJSON(),
+      fullName: user.fullName,
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 /*
 exports.getUserAllPostsByUserId = async (req, res) => {
   const userId = req.params.id; // Assuming userId is passed as a route parameter
@@ -1083,5 +1295,32 @@ console.log("userId-----------------",userId)
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+
+
+exports.getCountry = async (req,res)=>{
+  try{
+    const country = await Country.findAll();
+    res.status(200).json(country);
+  }catch(error){
+    res.status(500).json({message:'Internal Server Error'})
+  }
+}
+
+
+
+exports.getStates = async (req, res) => {
+  try{
+  const countryId = parseInt(req.params.id, 10);
+  const state = await State.findAll({where:{countryId:countryId}})
+  console.log(state)
+  res.status(200).json(state)
+  }catch(error){
+    console.log(error);
+    res.status(500).json({message:'Internal Server error'})
+
   }
 };

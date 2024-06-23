@@ -13,7 +13,7 @@ router.get('/users', userController.getAllUsers); // List all users (Admin only)
 // Register and login routes (do not require token)
 router.post('/register', userController.register);
 router.post('/createUserDetails/:id', userController.createUserDetails)
-router.put('/updateUserDetails/:id',verifyToken, userController.updateUserDetails)
+router.put('/updateUserDetails/:id', userController.updateUserDetails)
 router.post('/login', userController.login);
 router.post('/goToHome/:id', userController.goToHome);
 
@@ -44,6 +44,9 @@ router.post('/uploadVerificationFiles/:id', userController.uploadVerificationFil
 
 router.get('/getUserDetails/:id', userController.getUserDetails);
 router.get('/getUserAllPostsByUserId/:id', userController.getUserAllPostsByUserId);
+
+router.get('/getCountry', userController.getCountry);
+router.get('/getStates/:id', userController.getStates);
 
 module.exports = router;
 

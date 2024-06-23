@@ -25,4 +25,8 @@ router.get('/getApprovedLeaders', adminController.getApprovedLeaders);
 router.delete('/deleteAdminSetting', adminController.deleteAdminSetting);
 
 router.put('/updateUserDetails/:id', adminController.updateUserDetails)
+router.post('/createCountry', adminController.createCountry);
+router.post('/createState/:id', adminController.createState);
+router.post('/bulkCreateState/:id', adminController.bulkCreateState);
+
 module.exports = router;
