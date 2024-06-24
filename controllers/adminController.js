@@ -341,17 +341,17 @@ exports.updateAdminRolePermissions = async (req, res) => {
 
       // Update only the specified permissions
       accessPermissions.forEach(permission => {
-          const section = Object.keys(permission)[0];
-          const newPermission = permission[section];
+          const section = permission.section;
+          const newPermission = permission.permission;
 
           // Find the existing permission entry in accessPermissions array
-          const existingPermission = adminRole.accessPermissions.find(item => Object.keys(item)[0] === section);
+          const existingPermission = adminRole.accessPermissions.find(item => item.section === section);
           
           // If found, update the permission; otherwise, create a new entry
           if (existingPermission) {
-              existingPermission[section] = newPermission;
+              existingPermission.permission = newPermission;
           } else {
-              adminRole.accessPermissions.push({ [section]: newPermission });
+              adminRole.accessPermissions.push({ section, permission: newPermission });
           }
       });
 
@@ -364,7 +364,6 @@ exports.updateAdminRolePermissions = async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 
 exports.getAllAdminRole = async (req, res) => {
   try {
@@ -440,11 +439,6 @@ exports.getAdminUser =async(req,res)=>{
 exports.updateAdminUser = async (req, res) => {
   const userId = req.params.id;
   const { fullName, email, role, password, status } = req.body;
-
-  // Validate input
-  if (!fullName && !email && !role && !password && !status) {
-      return res.status(400).json({ message: 'At least one field (fullName, email, role, password, status) must be provided for update' });
-  }
 
   try {
       // Find the user by ID
