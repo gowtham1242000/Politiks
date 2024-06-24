@@ -29,4 +29,7 @@ router.post('/createCountry', adminController.createCountry);
 router.post('/createState/:id', adminController.createState);
 router.post('/bulkCreateState/:id', adminController.bulkCreateState);
 
+
+router.post('/createAdminRole', adminController.createAdminRole);
+router.get('/getAllAdminRole', adminController.getAllAdminRole);
 module.exports = router;

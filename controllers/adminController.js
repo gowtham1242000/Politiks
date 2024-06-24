@@ -10,7 +10,7 @@ const JWT_SECRET = 'your_super_secret_key_12345';
 const AdminSetting = require('../models/AdminSetting');
 const Country = require('../models/Country');
 const State = require('../models/State');
-
+const AdminRole = require('../models/AdminRole');
 
 exports.createCountry= async (req,res)=>{
   try {
@@ -307,6 +307,39 @@ exports.deleteAdminSetting = async (req, res) => {
   }
 };
 
+exports.createAdminRole = async (req,res)=>{
+  try {
+    const { name, accessPermissions } = req.body;
 
+    const processedAccessPermissions = accessPermissions.map(section => {
+      if (!section.permissions || Object.keys(section.permissions).length === 0) {
+        return {
+          section: section.section,
+          permissions: { defaultPermission: section.permission || 'read' } // Default to 'read' if no permission is provided
+        };
+      }
+      return {
+        section: section.section,
+        permissions: section.permissions
+      };
+    });
+
+    const newAdminRole = await AdminRole.create({ name, accessPermissions: processedAccessPermissions });
+    res.status(201).json(newAdminRole);
+  } catch (err) {
+    console.error('Error creating admin role:', err);
+    res.status(500).json({ error: 'Failed to create admin role' });
+  }
+}
+
+exports.getAllAdminRole =async(req,res)=>{
+  try {
+    const adminRoles = await AdminRole.findAll();
+    res.status(200).json(adminRoles);
+  } catch (err) {
+    console.error('Error fetching admin roles:', err);
+    res.status(500).json({ error: 'Failed to fetch admin roles' });
+  }
+}
 
 
