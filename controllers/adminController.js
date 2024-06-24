@@ -307,20 +307,15 @@ exports.deleteAdminSetting = async (req, res) => {
   }
 };
 
-exports.createAdminRole = async (req,res)=>{
+exports.createAdminRole = async (req, res) => {
   try {
     const { name, accessPermissions } = req.body;
 
-    const processedAccessPermissions = accessPermissions.map(section => {
-      if (!section.permissions || Object.keys(section.permissions).length === 0) {
-        return {
-          section: section.section,
-          permissions: { defaultPermission: section.permission || 'read' } // Default to 'read' if no permission is provided
-        };
-      }
+    const processedAccessPermissions = accessPermissions.map(permission => {
+      const section = Object.keys(permission)[0];
       return {
-        section: section.section,
-        permissions: section.permissions
+        section,
+        permission: permission[section]
       };
     });
 
@@ -330,9 +325,9 @@ exports.createAdminRole = async (req,res)=>{
     console.error('Error creating admin role:', err);
     res.status(500).json({ error: 'Failed to create admin role' });
   }
-}
+};
 
-exports.getAllAdminRole =async(req,res)=>{
+exports.getAllAdminRole = async (req, res) => {
   try {
     const adminRoles = await AdminRole.findAll();
     res.status(200).json(adminRoles);
@@ -340,6 +335,5 @@ exports.getAllAdminRole =async(req,res)=>{
     console.error('Error fetching admin roles:', err);
     res.status(500).json({ error: 'Failed to fetch admin roles' });
   }
-}
-
+};
 

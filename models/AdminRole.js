@@ -1,5 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = require('../config/config'); // Ensure this path is correct for your setup
+const sequelize = require('../config/config'); // Assuming your Sequelize instance is imported from a database configuration file
 
 const AdminRole = sequelize.define('AdminRole', {
   name: {
@@ -13,18 +13,8 @@ const AdminRole = sequelize.define('AdminRole', {
   accessPermissions: {
     type: DataTypes.JSONB,
     allowNull: false,
-    defaultValue: []
+    defaultValue: [] // Default empty array for access permissions
   }
 });
-
-// Sync the model with the database
-(async () => {
-  try {
-    await sequelize.sync({ alter: true }); // This will alter the table to match the model
-    console.log('AdminRole table synchronized');
-  } catch (error) {
-    console.error('Error synchronizing AdminRole table:', error);
-  }
-})();
 
 module.exports = AdminRole;
