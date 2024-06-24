@@ -11,6 +11,7 @@ const AdminSetting = require('../models/AdminSetting');
 const Country = require('../models/Country');
 const State = require('../models/State');
 const AdminRole = require('../models/AdminRole');
+const AdminUser = require('../models/AdminUser');
 
 exports.createCountry= async (req,res)=>{
   try {
@@ -327,6 +328,44 @@ exports.createAdminRole = async (req, res) => {
   }
 };
 
+exports.updateAdminRolePermissions = async (req, res) => {
+  const roleId = req.params.id;
+  const { accessPermissions } = req.body;
+
+  try {
+      // Find the admin role by ID
+      const adminRole = await AdminRole.findByPk(roleId);
+      if (!adminRole) {
+          return res.status(404).json({ message: 'Admin role not found' });
+      }
+
+      // Update only the specified permissions
+      accessPermissions.forEach(permission => {
+          const section = Object.keys(permission)[0];
+          const newPermission = permission[section];
+
+          // Find the existing permission entry in accessPermissions array
+          const existingPermission = adminRole.accessPermissions.find(item => Object.keys(item)[0] === section);
+          
+          // If found, update the permission; otherwise, create a new entry
+          if (existingPermission) {
+              existingPermission[section] = newPermission;
+          } else {
+              adminRole.accessPermissions.push({ [section]: newPermission });
+          }
+      });
+
+      // Save the updated admin role with modified permissions
+      await adminRole.save();
+
+      res.status(200).json({ message: 'Admin role permissions updated successfully', adminRole });
+  } catch (error) {
+      console.error('Error updating admin role permissions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
 exports.getAllAdminRole = async (req, res) => {
   try {
     const adminRoles = await AdminRole.findAll();
@@ -337,3 +376,131 @@ exports.getAllAdminRole = async (req, res) => {
   }
 };
 
+exports.deleteAdminRole = async (req, res) => {
+  const roleId = req.params.id;
+
+  try {
+      // Find the admin role by ID
+      const adminRole = await AdminRole.findByPk(roleId);
+      if (!adminRole) {
+          return res.status(404).json({ message: 'Admin role not found' });
+      }
+
+      // Delete the admin role
+      await adminRole.destroy();
+
+      res.status(200).json({ message: 'Admin role deleted successfully' });
+  } catch (error) {
+      console.error('Error deleting admin role:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+exports.createAdminUser = async(req,res)=>{
+  const { fullName, email, role, password,status } = req.body;
+
+// Validate input
+if (!fullName || !email || !role || !password) {
+    return res.status(400).json({ message: 'FullName, email, role, and password are required' });
+}
+try {
+    // Check if the user already exists
+    const existingUser = await AdminUser.findOne({ where: { email } });
+    if (existingUser) {
+        return res.status(400).json({ message: 'Email address is already registered' });
+    }
+
+    // Create the user
+    const newUser = await AdminUser.create({
+        fullName,
+        email,
+        role, // Set the role dynamically based on the input
+        password,
+        status // Store the password as provided (ensure it's handled securely in production)
+    });
+
+    res.status(201).json({ message: 'User created successfully', user: newUser });
+} catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+}
+}
+
+exports.getAdminUser =async(req,res)=>{
+  try{
+    const adminUser = await AdminUser.findAll();
+    res.status(200).json(adminUser);
+  }catch(err){
+    console.log("err--",err)
+    res.status(500).json({error:'Failed to fetch Details'})
+  }
+}
+
+exports.updateAdminUser = async (req, res) => {
+  const userId = req.params.id;
+  const { fullName, email, role, password, status } = req.body;
+
+  // Validate input
+  if (!fullName && !email && !role && !password && !status) {
+      return res.status(400).json({ message: 'At least one field (fullName, email, role, password, status) must be provided for update' });
+  }
+
+  try {
+      // Find the user by ID
+      const user = await AdminUser.findByPk(userId);
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Update the user fields if provided
+      if (fullName) {
+          user.fullName = fullName;
+      }
+      if (email) {
+          // Check if the new email is already taken by another user
+          const existingUser = await AdminUser.findOne({ where: { email } });
+          if (existingUser && existingUser.id !== userId) {
+              return res.status(400).json({ message: 'Email address is already registered' });
+          }
+          user.email = email;
+      }
+      if (role) {
+          user.role = role;
+      }
+      if (password) {
+          user.password = password;
+      }
+      if (status) {
+          user.status = status;
+      }
+
+      // Save the updated user
+      await user.save();
+
+      res.status(200).json({ message: 'User updated successfully', user });
+  } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.deleteAdminUser = async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+      // Find the user by ID
+      const user = await AdminUser.findByPk(userId);
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Delete the user
+      await user.destroy();
+
+      res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};

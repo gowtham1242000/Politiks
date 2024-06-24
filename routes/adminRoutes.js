@@ -32,4 +32,11 @@ router.post('/bulkCreateState/:id', adminController.bulkCreateState);
 
 router.post('/createAdminRole', adminController.createAdminRole);
 router.get('/getAllAdminRole', adminController.getAllAdminRole);
+router.put('/updateAdminRolePermissions/:id', adminController.updateAdminRolePermissions);
+router.delete('/deleteAdminRole/:id', adminController.deleteAdminRole);
+
+router.post('/createAdminUser', adminController.createAdminUser);
+router.get('/getAdminUser', adminController.getAdminUser);
+router.put('/updateAdminUser/:id', adminController.updateAdminUser);
+router.delete('/deleteAdminUser/:id', adminController.deleteAdminUser);
 module.exports = router;
