@@ -574,6 +574,9 @@ exports.updateUser = async (req, res) => {
         const interests = await Interest.findAll({
             where: { id: interestIds }
         });
+	const interestNames = interests.map(interest => interest.name);
+console.log("interestNames----------",interestNames);
+//return
         if (interests.length !== interestIds.length) {
             return res.status(404).json({ message: 'One or more interests not found' });
         }
@@ -584,6 +587,7 @@ exports.updateUser = async (req, res) => {
             return res.status(404).json({ message: 'User details not found' });
         }
         userDetails.myInterest = interestIds;
+        userDetails.myInterestField = interestNames;
         await userDetails.save();
 
         // Remove existing interests from UserInterest
@@ -696,10 +700,10 @@ exports.getFollowingList = async (req, res) => {
   };
   
   exports.createPost = async (req, res) => {
-    const { tagUser, caption } = req.body;
+    const { tagUser, caption, location } = req.body;
     const userId = req.params.id;
     const image = req.files && req.files.image;
-    const location ="kochi";
+    //const location =location;
 
   console.log("image---------------",image)
     try {
@@ -1192,9 +1196,10 @@ exports.getUserDetails = async (req, res) => {
 
 exports.getUserDetails = async (req, res) => {
   const userId = req.params.id;
-
+  console.log("userId---------oog id",userId)
   try {
     // Find user details by userId
+console.log("userId------------",userId)
     const userDetails = await UserDetails.findOne({
       where: { userId: userId },
   //    attributes: ['userId', 'userName', 'role', 'dateOfBirth', 'gender', 'country', 'state', 'status', 'action', 'mySelf', 'userBannerProfile', 'userProfile', 'myParty', 'myInterest'],
