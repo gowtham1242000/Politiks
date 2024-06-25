@@ -372,10 +372,23 @@ exports.updateAdminRolePermissions = async (req, res) => {
 exports.getAllAdminRole = async (req, res) => {
   try {
     const adminRoles = await AdminRole.findAll();
-    res.status(200).json(adminRoles);
-  } catch (err) {
-    console.error('Error fetching admin roles:', err);
-    res.status(500).json({ error: 'Failed to fetch admin roles' });
+
+    // Format the response
+    const formattedRoles = adminRoles.map(role => {
+      const formattedPermissions = (role.accessPermissions || []).map(permission => {
+        return { [permission.section]: permission.permission };
+      });
+
+      return {
+        name: role.name,
+        accessPermissions: formattedPermissions
+      };
+    });
+
+    res.status(200).json(formattedRoles);
+  } catch (error) {
+    console.error('Error fetching admin roles:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -584,28 +597,6 @@ exports.getAllMyParties = async (req, res) => {
   }
 };
 
-exports.updateMyParty = async (req, res) => {
-  const { id } = req.params.id;
-  const { name, status, icons, viewOrder } = req.body;
-
-  try {
-      const myParty = await MyParty.findByPk(id);
-      if (!myParty) {
-          return res.status(404).json({ message: 'MyParty not found' });
-      }
-
-      myParty.name = name || myParty.name;
-      myParty.status = status || myParty.status;
-      myParty.icons = icons || myParty.icons;
-      myParty.viewOrder = viewOrder || myParty.viewOrder;
-
-      await myParty.save();
-      res.status(200).json({ message: 'MyParty updated successfully', myParty });
-  } catch (error) {
-      console.error('Error updating myParty:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
-};
 
 exports.deleteMyParty = async (req, res) => {
   const { id } = req.params.id;
@@ -623,3 +614,4 @@ exports.deleteMyParty = async (req, res) => {
       res.status(500).json({ message: 'Internal server error' });
   }
 };
+
