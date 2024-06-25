@@ -26,7 +26,7 @@ exports.register = async (req, res) => {
   const { email, password, userName, googleId } = req.body;
 console.log("req.body----",req.body)
   try {
-      if (googleId) {
+     /* if (googleId) {
           // Social login flow via Google OAuth
           let user = await User.findOne({ where: { googleId } });
 
@@ -47,7 +47,45 @@ console.log("req.body----",req.body)
           // const token = generateJWTToken(user); // Implement this function as needed
 
           return res.json({ message: 'User registered successfully', user });
+      }*/
+      if (googleId) {
+        console.log("entering the condition one------")
+  // Social login flow via Google OAuth
+  let user = await User.findOne({ where: { googleId } });
+
+  if (user) {
+    // User exists, check userDetails status
+    const userDetails = await UserDetails.findOne({ where: { userId: user.id } });
+
+    if (userDetails) {
+      if (!userDetails.status) {
+console.log("userDetails.status-------------")
+        // Status is false, return response indicating profile not approved
+        return res.status(403).json({ message: 'Your profile is not approved by the leader' });
+      } else {
+        // Status is true, return response indicating profile approved
+console.log("userDetails.status---------------",userDetails.status)
+        return res.status(200).json({ message: 'Leader has approved your profile', user });
       }
+    }
+
+    // No userDetails found, but user exists
+    return res.status(200).json({ message: 'User already exists', user });
+  }
+
+  // Create new user for Google OAuth
+  user = await User.create({
+    email,
+    fullName: userName, // Assuming userName maps to fullName
+    googleId,
+    // Add other relevant fields
+  });
+
+  // Optionally generate JWT token and respond
+  // const token = generateJWTToken(user); // Implement this function as needed
+
+  return res.json({ message: 'User registered successfully', user });
+}
      /* else {
           // Normal registration flow with email and password
           const existingUser = await User.findOne({ where: { email } });
