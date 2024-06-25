@@ -1195,7 +1195,7 @@ exports.getUserDetails = async (req, res) => {
 
 */
 
-exports.getUserDetails = async (req, res) => {
+/*exports.getUserDetails = async (req, res) => {
   const userId = req.params.id;
   console.log("userId---------oog id",userId)
   try {
@@ -1232,6 +1232,59 @@ console.log("userId------------",userId)
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+exports.getUserDetails = async (req, res) => {
+  const userId = req.params.id;
+  console.log("userId---------oog id", userId);
+  
+  try {
+    // Find user details by userId
+    console.log("userId------------", userId);
+    const userDetails = await UserDetails.findOne({
+      where: { userId: userId },
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    // Fetch fullname from User table
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ['fullName'],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Fetch myParty details by name
+    const myPartyData = await MyParty.findOne({
+      where: { name: userDetails.myParty },
+      attributes: ['icons','name'] // Add any other fields you need from myParty table
+    });
+
+    if (!myPartyData) {
+      return res.status(404).json({ message: 'myParty details not found' });
+    }
+
+    // Merge userDetails, user, and myParty data
+    const response = {
+      ...userDetails.toJSON(),
+      fullName: user.fullName,
+      myParty: {
+        ...myPartyData.toJSON()
+      }
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 /*
 exports.getUserAllPostsByUserId = async (req, res) => {
   const userId = req.params.id; // Assuming userId is passed as a route parameter
