@@ -314,23 +314,24 @@ exports.deleteAdminSetting = async (req, res) => {
 
 exports.createAdminRole = async (req, res) => {
   try {
-    const { name, accessPermissions } = req.body;
+    const { name, status, accessTo } = req.body;
 
-    const processedAccessPermissions = accessPermissions.map(permission => {
-      const section = Object.keys(permission)[0];
+    const processedAccessPermissions = accessTo.map(permission => {
+      const { section, access } = permission;
       return {
         section,
-        permission: permission[section]
+        permission: access
       };
     });
 
-    const newAdminRole = await AdminRole.create({ name, accessPermissions: processedAccessPermissions });
+    const newAdminRole = await AdminRole.create({ name, status, accessPermissions: processedAccessPermissions });
     res.status(201).json(newAdminRole);
   } catch (err) {
     console.error('Error creating admin role:', err);
     res.status(500).json({ error: 'Failed to create admin role' });
   }
 };
+
 
 exports.updateAdminRolePermissions = async (req, res) => {
   const roleId = req.params.id;
