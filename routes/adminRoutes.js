@@ -39,4 +39,10 @@ router.post('/createAdminUser', adminController.createAdminUser);
 router.get('/getAdminUser', adminController.getAdminUser);
 router.put('/updateAdminUser/:id', adminController.updateAdminUser);
 router.delete('/deleteAdminUser/:id', adminController.deleteAdminUser);
+
+router.post('/createMyParty', adminController.createMyParty);
+router.get('/getAllMyParties', adminController.getAllMyParties);
+router.put('/updateMyParty/:id', adminController.updateMyParty);
+router.delete('/deleteMyParty/:id', adminController.deleteMyParty);
+
 module.exports = router;

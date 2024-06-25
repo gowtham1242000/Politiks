@@ -12,6 +12,10 @@ const Country = require('../models/Country');
 const State = require('../models/State');
 const AdminRole = require('../models/AdminRole');
 const AdminUser = require('../models/AdminUser');
+const MyParty = require('../models/MyParty');
+
+const fs = require('fs');
+const path = require('path');
 
 exports.createCountry= async (req,res)=>{
   try {
@@ -495,6 +499,102 @@ exports.deleteAdminUser = async (req, res) => {
       res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
       console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+const saveImage = (file, entityId) => {
+  const entityDir = path.join('/etc/ec/data/myparty', entityId.toString());
+  if (!fs.existsSync(entityDir)) {
+      fs.mkdirSync(entityDir, { recursive: true });
+  }
+
+  const filePath = path.join(entityDir, file.name.replace(/\s+/g, '_'));
+  fs.writeFileSync(filePath, file.data);
+  return filePath;
+};
+
+exports.updateMyParty = async (req, res) => {
+  const { id } = req.params;
+  const { name, status, viewOrder } = req.body;
+  const icons = req.files && req.files.icon;
+
+  try {
+      const myParty = await MyParty.findByPk(id);
+      if (!myParty) {
+          return res.status(404).json({ message: 'MyParty not found' });
+      }
+
+      // Only update the fields that are provided
+      if (name) myParty.name = name;
+      if (status !== undefined) myParty.status = status;
+      if (viewOrder !== undefined) myParty.viewOrder = viewOrder;
+
+      if (icons && icons.name && icons.data) {
+          const iconsPath = saveImage(icons, myParty.id);
+
+          // Construct the URL for the image
+          const iconsUrl = `https://politiks.aindriya.co.uk/myparty/${myParty.id}/${icons.name.replace(/\s+/g, '_')}`;
+          myParty.icons = iconsUrl;
+      } else if (icons) {
+          console.error('Invalid icons file:', icons);
+      }
+
+      await myParty.save();
+
+      res.status(200).json({ message: 'MyParty updated successfully', myParty });
+  } catch (error) {
+      console.error('Error updating myParty:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.getAllMyParties = async (req, res) => {
+  try {
+      const myParties = await MyParty.findAll({ order: [['viewOrder', 'ASC']] });
+      res.status(200).json(myParties);
+  } catch (error) {
+      console.error('Error fetching myParties:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.updateMyParty = async (req, res) => {
+  const { id } = req.params.id;
+  const { name, status, icons, viewOrder } = req.body;
+
+  try {
+      const myParty = await MyParty.findByPk(id);
+      if (!myParty) {
+          return res.status(404).json({ message: 'MyParty not found' });
+      }
+
+      myParty.name = name || myParty.name;
+      myParty.status = status || myParty.status;
+      myParty.icons = icons || myParty.icons;
+      myParty.viewOrder = viewOrder || myParty.viewOrder;
+
+      await myParty.save();
+      res.status(200).json({ message: 'MyParty updated successfully', myParty });
+  } catch (error) {
+      console.error('Error updating myParty:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.deleteMyParty = async (req, res) => {
+  const { id } = req.params.id;
+
+  try {
+      const myParty = await MyParty.findByPk(id);
+      if (!myParty) {
+          return res.status(404).json({ message: 'MyParty not found' });
+      }
+
+      await myParty.destroy();
+      res.status(200).json({ message: 'MyParty deleted successfully' });
+  } catch (error) {
+      console.error('Error deleting myParty:', error);
       res.status(500).json({ message: 'Internal server error' });
   }
 };

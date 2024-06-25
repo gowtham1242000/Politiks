@@ -48,6 +48,9 @@ router.get('/getUserAllPostsByUserId/:id', userController.getUserAllPostsByUserI
 router.get('/getCountry', userController.getCountry);
 router.get('/getStates/:id', userController.getStates);
 
+router.get('/getAllMyParties', userController.getAllMyParties);
+
+
 module.exports = router;
 
 

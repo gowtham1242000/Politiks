@@ -12,6 +12,7 @@ const Post = require('../models/Post');
 
 const Country = require('../models/Country');
 const State = require('../models/State');
+const MyParty = require('../models/MyParty');
 
 
 const { generateOTP, sendOTP } = require('../middleware/otpService');
@@ -1327,5 +1328,15 @@ exports.getStates = async (req, res) => {
     console.log(error);
     res.status(500).json({message:'Internal Server error'})
 
+  }
+};
+
+exports.getAllMyParties = async (req, res) => {
+  try {
+      const myParties = await MyParty.findAll({ order: [['viewOrder', 'ASC']] });
+      res.status(200).json(myParties);
+  } catch (error) {
+      console.error('Error fetching myParties:', error);
+      res.status(500).json({ message: 'Internal server error' });
   }
 };
