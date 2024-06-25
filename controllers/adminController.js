@@ -504,6 +504,7 @@ exports.deleteAdminUser = async (req, res) => {
 };
 
 
+
 const saveImage = (file, entityId) => {
   const entityDir = path.join('/etc/ec/data/myparty', entityId.toString());
   if (!fs.existsSync(entityDir)) {
@@ -515,39 +516,63 @@ const saveImage = (file, entityId) => {
   return filePath;
 };
 
-exports.updateMyParty = async (req, res) => {
-  const { id } = req.params;
+exports.createMyParty = async (req, res) => {
   const { name, status, viewOrder } = req.body;
   const icons = req.files && req.files.icon;
 
   try {
-      const myParty = await MyParty.findByPk(id);
-      if (!myParty) {
-          return res.status(404).json({ message: 'MyParty not found' });
-      }
-
-      // Only update the fields that are provided
-      if (name) myParty.name = name;
-      if (status !== undefined) myParty.status = status;
-      if (viewOrder !== undefined) myParty.viewOrder = viewOrder;
+      const newMyParty = await MyParty.create({ name, status, viewOrder });
 
       if (icons && icons.name && icons.data) {
-          const iconsPath = saveImage(icons, myParty.id);
+          const iconsPath = saveImage(icons, newMyParty.id);
 
           // Construct the URL for the image
-          const iconsUrl = `https://politiks.aindriya.co.uk/myparty/${myParty.id}/${icons.name.replace(/\s+/g, '_')}`;
-          myParty.icons = iconsUrl;
-      } else if (icons) {
+          const iconsUrl = `https://politiks.aindriya.co.uk/myparty/${newMyParty.id}/${icons.name.replace(/\s+/g, '_')}`;
+          newMyParty.icons = iconsUrl;
+          await newMyParty.save();
+      } else {
           console.error('Invalid icons file:', icons);
       }
 
-      await myParty.save();
-
-      res.status(200).json({ message: 'MyParty updated successfully', myParty });
+      res.status(201).json({ message: 'MyParty created successfully', myParty: newMyParty });
   } catch (error) {
-      console.error('Error updating myParty:', error);
+      console.error('Error creating myParty:', error);
       res.status(500).json({ message: 'Internal server error' });
   }
+};
+exports.updateMyParty = async (req, res) => {
+    const { id } = req.params;
+    const { name, status, viewOrder } = req.body;
+    const icons = req.files && req.files.icon;
+
+    try {
+        const myParty = await MyParty.findByPk(id);
+        if (!myParty) {
+            return res.status(404).json({ message: 'MyParty not found' });
+        }
+
+        // Only update the fields that are provided
+        if (name) myParty.name = name;
+        if (status !== undefined) myParty.status = status;
+        if (viewOrder !== undefined) myParty.viewOrder = viewOrder;
+
+        if (icons && icons.name && icons.data) {
+            const iconsPath = saveImage(icons, myParty.id);
+
+            // Construct the URL for the image
+            const iconsUrl = `https://politiks.aindriya.co.uk/myparty/${myParty.id}/${icons.name.replace(/\s+/g, '_')}`;
+            myParty.icons = iconsUrl;
+        } else if (icons) {
+            console.error('Invalid icons file:', icons);
+        }
+
+        await myParty.save();
+
+        res.status(200).json({ message: 'MyParty updated successfully', myParty });
+    } catch (error) {
+        console.error('Error updating myParty:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 };
 exports.getAllMyParties = async (req, res) => {
   try {
