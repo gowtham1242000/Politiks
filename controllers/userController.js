@@ -1436,13 +1436,47 @@ console.log("comment-----",comment)
   }
 };
 
-
+/*
 exports.getCommentsByPostId = async (req, res) => {
-  const { postId } = req.params.id;
+  const postId = req.params.id;
 
   try {
       const comments = await Comment.findAll({ where: { postId } });
       res.status(200).json(comments);
+  } catch (error) {
+      console.error('Error fetching comments:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+exports.getCommentsByPostId = async (req, res) => {
+  const postId = req.params.id;
+
+  try {
+      // Fetch comments by postId
+      const comments = await Comment.findAll({ where: { postId } });
+      
+      // Create an array of userIds from the comments
+      const userIds = comments.map(comment => comment.userId);
+
+      // Fetch user details for those userIds
+      const userDetails = await UserDetails.findAll({ where: { userId: userIds } });
+
+      // Create a map of userId to userDetails
+      const userDetailsMap = userDetails.reduce((acc, userDetail) => {
+        acc[userDetail.userId] = userDetail;
+        return acc;
+      }, {});
+
+      // Attach user details to the comments
+      const commentsWithUserDetails = comments.map(comment => {
+        return {
+          ...comment.toJSON(),
+          userDetails: userDetailsMap[comment.userId] || null
+        };
+      });
+
+      res.status(200).json(commentsWithUserDetails);
   } catch (error) {
       console.error('Error fetching comments:', error);
       res.status(500).json({ message: 'Internal server error' });
