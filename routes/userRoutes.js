@@ -50,6 +50,11 @@ router.get('/getStates/:id', userController.getStates);
 
 router.get('/getAllMyParties', userController.getAllMyParties);
 
+//comments
+
+router.post('/createComment', userController.createComment);
+router.get('/getCommentsByPostId/:id', userController.getCommentsByPostId);
+
 
 module.exports = router;
 

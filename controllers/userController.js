@@ -13,6 +13,8 @@ const Post = require('../models/Post');
 const Country = require('../models/Country');
 const State = require('../models/State');
 const MyParty = require('../models/MyParty');
+const Comment = require('../models/Comment');
+const subComment = require('../models/SubComment');
 
 
 const { generateOTP, sendOTP } = require('../middleware/otpService');
@@ -26,7 +28,7 @@ exports.register = async (req, res) => {
   const { email, password, userName, googleId } = req.body;
 console.log("req.body----",req.body)
   try {
-     /* if (googleId) {
+      if (googleId) {
           // Social login flow via Google OAuth
           let user = await User.findOne({ where: { googleId } });
 
@@ -47,71 +49,8 @@ console.log("req.body----",req.body)
           // const token = generateJWTToken(user); // Implement this function as needed
 
           return res.json({ message: 'User registered successfully', user });
-      }*/
-      if (googleId) {
-        console.log("entering the condition one------")
-  // Social login flow via Google OAuth
-  let user = await User.findOne({ where: { googleId } });
-
-  if (user) {
-    // User exists, check userDetails status
-    const userDetails = await UserDetails.findOne({ where: { userId: user.id } });
-
-    if (userDetails) {
-      if (!userDetails.status) {
-console.log("userDetails.status-------------")
-        // Status is false, return response indicating profile not approved
-        return res.status(403).json({ message: 'Your profile is not approved by the leader' });
-      } else {
-        // Status is true, return response indicating profile approved
-console.log("userDetails.status---------------",userDetails.status)
-        return res.status(200).json({ message: 'Leader has approved your profile', user });
       }
-    }
-
-    // No userDetails found, but user exists
-    return res.status(200).json({ message: 'User already exists', user });
-  }
-
-  // Create new user for Google OAuth
-  user = await User.create({
-    email,
-    fullName: userName, // Assuming userName maps to fullName
-    googleId,
-    // Add other relevant fields
-  });
-
-  // Optionally generate JWT token and respond
-  // const token = generateJWTToken(user); // Implement this function as needed
-
-  return res.json({ message: 'User registered successfully', user });
-}
-     /* else {
-          // Normal registration flow with email and password
-          const existingUser = await User.findOne({ where: { email } });
-
-          if (existingUser) {
-              // User exists, handle accordingly (e.g., update user details if needed)
-              return res.status(200).json({ message: 'User already exists', user });
-          }
-
-          // Proceed with normal registration logic
-              newUser = await User.create({
-              email,
-              password, // Assuming password is passed correctly
-              fullName: userName || null,
-              // Add other relevant fields
-          });
-
-          // Optionally generate JWT token and respond
-          // const token = generateJWTToken(newUser); // Implement this function as needed
-
-          return res.status(201).json({ message: 'User registered successfully', user: newUser });
-      }
-  } catch (error) {
-      console.error('Error processing registration or social login:', error);
-      return res.status(500).json({ message: 'Internal server error' });
-  }*/
+     
   else {
       // Normal registration flow with email and password
       const existingUser = await User.findOne({ where: { email } });
@@ -215,41 +154,7 @@ exports.checkUsername = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
-// User registration
-// exports.register = async (req, res) => {
-//     const { email, password, role, uniqueName, dateOfBirth, gender, country, state, interests, accountsToFollow } = req.body;
 
-//     try {
-//         const existingUser = await User.findOne({ where: { email } });
-//         if (existingUser) {
-//             return res.status(400).json({ message: 'User already exists' });
-//         }
-
-//         // Create user with default status false for leaders
-//         const newUser = await User.create({
-//             email,
-//             password,
-//             role,
-//             status: role === 'Leader' ? false : true,
-//             uniqueName,
-//             //iam,
-//             dateOfBirth,
-//             gender,
-//             country,
-//             state,
-//             interests,
-//             accountsToFollow
-//         });
-
-//         res.status(201).json({ message: 'User registered successfully', user: newUser });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: 'Internal Server Error' });
-//     }
-// }
-
-// User login
-// User login
 exports.login = async (req, res) => {
     const { email, password } = req.body;
     console.log("Login payload:", req.body); // Log request body for debugging
@@ -1479,6 +1384,30 @@ exports.getAllMyParties = async (req, res) => {
       res.status(200).json(myParties);
   } catch (error) {
       console.error('Error fetching myParties:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.createComment = async (req, res) => {
+  const { userId, postId, content } = req.body;
+
+  try {
+      const newComment = await Comment.create({ userId, postId, content });
+      res.status(201).json({ message: 'Comment created successfully', comment: newComment });
+  } catch (error) {
+      console.error('Error creating comment:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getCommentsByPostId = async (req, res) => {
+  const { postId } = req.params;
+
+  try {
+      const comments = await Comment.findAll({ where: { postId } });
+      res.status(200).json(comments);
+  } catch (error) {
+      console.error('Error fetching comments:', error);
       res.status(500).json({ message: 'Internal server error' });
   }
 };
