@@ -54,7 +54,9 @@ router.get('/getAllMyParties', userController.getAllMyParties);
 
 router.post('/createComment', userController.createComment);
 router.get('/getCommentsByPostId/:id', userController.getCommentsByPostId);
+router.post('/createSubComment', userController.createSubComment);
 
+router.put('/updateComment/:commentId', userController.updateComment);
 
 module.exports = router;
 

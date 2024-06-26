@@ -414,7 +414,7 @@ exports.deleteAdminRole = async (req, res) => {
 };
 
 
-exports.createAdminUser = async(req,res)=>{
+/*exports.createAdminUser = async(req,res)=>{
   const { fullName, email, role, password,status } = req.body;
 
 // Validate input
@@ -443,6 +443,48 @@ try {
     res.status(500).json({ message: 'Internal server error' });
 }
 }
+*/
+
+exports.createAdminUser = async (req, res) => {
+    const { fullName, email, role: roleId, password, status } = req.body;
+
+    // Validate input
+    if (!fullName || !email || !roleId || !password) {
+        return res.status(400).json({ message: 'FullName, email, role, and password are required' });
+    }
+
+    try {
+        // Check if the user already exists
+        const existingUser = await AdminUser.findOne({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email address is already registered' });
+        }
+console.log("roleId--------------",roleId);
+        // Find the role by ID
+        const adminRole = await AdminRole.findOne({where:{id:roleId}});
+console.log("adminRole------------",adminRole)
+  //      if (!adminRole || adminRole.status !== 'active') {
+          if (!adminRole){
+            return res.status(400).json({ message: 'Invalid or inactive role ID provided' });
+        }
+        const isActive = status === 'true'; // Assuming status comes as a string 'true' or 'false'
+    const userStatus = isActive ? 'active' : 'inactive';
+
+        // Create the user with the role name
+        const newUser = await AdminUser.create({
+            fullName,
+            email,
+            role: adminRole.name, // Set the role based on the name from AdminRole
+            password,
+            status:userStatus // Store the status as provided
+        });
+
+        res.status(201).json({ message: 'User created successfully', user: newUser });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
 
 exports.getAdminUser =async(req,res)=>{
   try{
@@ -484,7 +526,9 @@ exports.updateAdminUser = async (req, res) => {
           user.password = password;
       }
       if (status) {
-          user.status = status;
+        const isActive = status === 'true'; // Assuming status comes as a string 'true' or 'false'
+    const userStatus = isActive ? 'active' : 'inactive';
+          user.status = userStatus;
       }
 
       // Save the updated user

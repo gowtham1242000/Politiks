@@ -14,7 +14,7 @@ const Country = require('../models/Country');
 const State = require('../models/State');
 const MyParty = require('../models/MyParty');
 const Comment = require('../models/Comment');
-const subComment = require('../models/SubComment');
+const SubComment = require('../models/SubComment');
 
 
 const { generateOTP, sendOTP } = require('../middleware/otpService');
@@ -55,10 +55,12 @@ console.log("req.body----",req.body)
       // Normal registration flow with email and password
       const existingUser = await User.findOne({ where: { email } });
 
-      if (existingUser) {
+/*      if (existingUser) {
         const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
         if (!userDetails) {
           // User exists but no details, remove the user
+console.log("existingUser.id--------------",existingUser.id);
+          await UserInterest.destory({where: { userId: existingUser.id }})
           await User.destroy({ where: { id: existingUser.id } });
         } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
           // Remove old user and details
@@ -68,6 +70,26 @@ console.log("req.body----",req.body)
           return res.status(400).json({ message: 'User already exists or not allowed to register' });
         }
       }
+*/
+	if (existingUser) {
+    const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
+    if (!userDetails) {
+        // User exists but no details, remove the user
+        console.log("existingUser.id--------------", existingUser.id);
+        await UserInterest.destroy({ where: { userId: existingUser.id } });
+        await LeaderVerify.destroy({ where: { userId: existingUser.id }});
+        await User.destroy({ where: { id: existingUser.id } });
+    } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
+        // Remove old user and details
+       await UserInterest.destroy({ where: { userId: existingUser.id } });
+        await LeaderVerify.destroy({ where: { userId: existingUser.id }});
+        await UserDetails.destroy({ where: { userId: existingUser.id } });
+        await User.destroy({ where: { id: existingUser.id } });
+    } else {
+        return res.status(400).json({ message: 'User already exists or not allowed to register' });
+    }
+}
+
 
       // Proceed with normal registration logic
       const newUser = await User.create({
@@ -1400,14 +1422,94 @@ exports.createComment = async (req, res) => {
   }
 };
 
-exports.getCommentsByPostId = async (req, res) => {
-  const { postId } = req.params;
-
+exports.updateComment = async (req, res) => {
+  const id = req.params.commentId;
+  const { content, userId } = req.body; // Assuming userId is passed in the request body
+console.log("id-----------",id)
+console.log("id-----------c",content)
+console.log("id-----------u",userId)
   try {
-      const comments = await Comment.findAll({ where: { postId } });
+    const comment = await Comment.findOne({where:{id:id}});
+console.log("comment-----",comment)
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    // Check if the userId matches the userId of the comment
+    if (comment.userId !== userId) {
+      return res.status(403).json({ message: 'You are not authorized to update this comment' });
+    }
+
+    if (content) {
+      comment.content = content;
+    }
+
+    await comment.save();
+
+    res.status(200).json({ message: 'Comment updated successfully', comment });
+  } catch (error) {
+    console.error('Error updating comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/*
+exports.getCommentsByPostId = async (req, res) => {
+console.log("req.params.id------------",req.params.id);
+  const postId = req.params.id;
+console.log("postId-------------",postId)
+  try {
+      const comments = await Comment.findAll({ where: { postId:postId } });
+console.log("---------------comments------------------",comments)
       res.status(200).json(comments);
   } catch (error) {
       console.error('Error fetching comments:', error);
       res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+
+exports.getCommentsByPostId = async (req, res) => {
+  const postId = req.params.id;
+
+  try {
+    // Find all comments for the given postId
+    const comments = await Comment.findAll({
+      where: { postId },
+      raw: true // Retrieve raw data to manipulate
+    });
+
+    // Map over each comment to fetch associated sub-comments
+    const commentsWithSubComments = await Promise.all(comments.map(async (comment) => {
+      // Find sub-comments for the current commentId
+      const subComments = await SubComment.findAll({
+        where: { commentId: comment.id },
+        raw: true // Retrieve raw data to manipulate
+      });
+
+      // Add sub-comments to the current comment object
+      return {
+        ...comment,
+        subComments
+      };
+    }));
+
+    res.status(200).json(commentsWithSubComments);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.createSubComment = async (req, res) => {
+  const { userId, commentId, subComment } = req.body;
+
+  try {
+      const newSubComment = await SubComment.create({ userId, commentId, subComment });
+console.log("newSubComment---------",newSubComment)
+      res.status(201).json({ message: 'SubComment created successfully', newSubComment });
+  } catch (error) {
+      console.error('Error creating subComment:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
