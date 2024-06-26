@@ -3,7 +3,7 @@ const sequelize = require('../config/config');
 const User = require('./User');
 const Comment = require('./Comment');
 
-const SubComment = sequelize.define('SubComment', {
+const CommentLike = sequelize.define('CommentLike', {
   userId: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -20,20 +20,11 @@ const SubComment = sequelize.define('SubComment', {
       key: 'id'
     }
   },
-  subComment: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  likeCount: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 0
-  }
 }, {
-  timestamps: true,
+  timestamps: true
 });
 
-SubComment.belongsTo(User, { foreignKey: 'userId', targetKey: 'id' });
-SubComment.belongsTo(Comment, { foreignKey: 'commentId', targetKey: 'id' });
+CommentLike.belongsTo(User, { foreignKey: 'userId', targetKey: 'id' });
+CommentLike.belongsTo(Comment, { foreignKey: 'commentId', targetKey: 'id' });
 
-module.exports = SubComment;
+module.exports = CommentLike;

@@ -16,6 +16,11 @@ const MyParty = require('../models/MyParty');
 const Comment = require('../models/Comment');
 const SubComment = require('../models/SubComment');
 
+const CommentLike = require('../models/CommentLike');
+const SubCommentLike = require('../models/SubCommentLike');
+
+
+
 
 const { generateOTP, sendOTP } = require('../middleware/otpService');
 
@@ -55,12 +60,10 @@ console.log("req.body----",req.body)
       // Normal registration flow with email and password
       const existingUser = await User.findOne({ where: { email } });
 
-/*      if (existingUser) {
+      if (existingUser) {
         const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
         if (!userDetails) {
           // User exists but no details, remove the user
-console.log("existingUser.id--------------",existingUser.id);
-          await UserInterest.destory({where: { userId: existingUser.id }})
           await User.destroy({ where: { id: existingUser.id } });
         } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
           // Remove old user and details
@@ -70,26 +73,6 @@ console.log("existingUser.id--------------",existingUser.id);
           return res.status(400).json({ message: 'User already exists or not allowed to register' });
         }
       }
-*/
-	if (existingUser) {
-    const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
-    if (!userDetails) {
-        // User exists but no details, remove the user
-        console.log("existingUser.id--------------", existingUser.id);
-        await UserInterest.destroy({ where: { userId: existingUser.id } });
-        await LeaderVerify.destroy({ where: { userId: existingUser.id }});
-        await User.destroy({ where: { id: existingUser.id } });
-    } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
-        // Remove old user and details
-       await UserInterest.destroy({ where: { userId: existingUser.id } });
-        await LeaderVerify.destroy({ where: { userId: existingUser.id }});
-        await UserDetails.destroy({ where: { userId: existingUser.id } });
-        await User.destroy({ where: { id: existingUser.id } });
-    } else {
-        return res.status(400).json({ message: 'User already exists or not allowed to register' });
-    }
-}
-
 
       // Proceed with normal registration logic
       const newUser = await User.create({
@@ -1453,53 +1436,19 @@ console.log("comment-----",comment)
   }
 };
 
-/*
+
 exports.getCommentsByPostId = async (req, res) => {
-console.log("req.params.id------------",req.params.id);
-  const postId = req.params.id;
-console.log("postId-------------",postId)
+  const { postId } = req.params.id;
+
   try {
-      const comments = await Comment.findAll({ where: { postId:postId } });
-console.log("---------------comments------------------",comments)
+      const comments = await Comment.findAll({ where: { postId } });
       res.status(200).json(comments);
   } catch (error) {
       console.error('Error fetching comments:', error);
       res.status(500).json({ message: 'Internal server error' });
   }
 };
-*/
 
-exports.getCommentsByPostId = async (req, res) => {
-  const postId = req.params.id;
-
-  try {
-    // Find all comments for the given postId
-    const comments = await Comment.findAll({
-      where: { postId },
-      raw: true // Retrieve raw data to manipulate
-    });
-
-    // Map over each comment to fetch associated sub-comments
-    const commentsWithSubComments = await Promise.all(comments.map(async (comment) => {
-      // Find sub-comments for the current commentId
-      const subComments = await SubComment.findAll({
-        where: { commentId: comment.id },
-        raw: true // Retrieve raw data to manipulate
-      });
-
-      // Add sub-comments to the current comment object
-      return {
-        ...comment,
-        subComments
-      };
-    }));
-
-    res.status(200).json(commentsWithSubComments);
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
 exports.createSubComment = async (req, res) => {
   const { userId, commentId, subComment } = req.body;
 
@@ -1513,3 +1462,113 @@ console.log("newSubComment---------",newSubComment)
   }
 };
 
+
+exports.likeComment = async (req, res) => {
+  const commentId = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the user has already liked this comment
+    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
+
+    if (existingLike) {
+      return res.status(400).json({ message: 'User has already liked this comment' });
+    }
+
+    // Create a new like entry
+    await CommentLike.create({ commentId, userId });
+
+    // Increment the like count
+    const comment = await Comment.findByPk(commentId);
+    comment.likeCount += 1;
+    await comment.save();
+
+    res.status(200).json({ message: 'Comment liked successfully' });
+  } catch (error) {
+    console.error('Error liking comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.unlikeComment = async (req, res) => {
+  const commentId = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the like entry exists
+    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
+
+    if (!existingLike) {
+      return res.status(400).json({ message: 'User has not liked this comment' });
+    }
+
+    // Remove the like entry
+    await CommentLike.destroy({ where: { commentId, userId } });
+
+    // Decrement the like count
+    const comment = await Comment.findByPk(commentId);
+    comment.likeCount -= 1;
+    await comment.save();
+
+    res.status(200).json({ message: 'Comment unliked successfully' });
+  } catch (error) {
+    console.error('Error unliking comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.likeSubComment = async (req, res) => {
+  const  subCommentId = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the user has already liked this sub-comment
+    const existingLike = await SubCommentLike.findOne({ where: { subCommentId, userId } });
+
+    if (existingLike) {
+      return res.status(400).json({ message: 'User has already liked this sub-comment' });
+    }
+
+    // Create a new like entry
+    await SubCommentLike.create({ subCommentId, userId });
+
+    // Increment the like count
+    const subComment = await SubComment.findByPk(subCommentId);
+    subComment.likeCount += 1;
+    await subComment.save();
+
+    res.status(200).json({ message: 'Sub-comment liked successfully' });
+  } catch (error) {
+    console.error('Error liking sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.unlikeSubComment = async (req, res) => {
+  const subCommentId  = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the like entry exists
+    const existingLike = await SubCommentLike.findOne({ where: { subCommentId, userId } });
+
+    if (!existingLike) {
+      return res.status(400).json({ message: 'User has not liked this sub-comment' });
+    }
+
+    // Remove the like entry
+    await SubCommentLike.destroy({ where: { subCommentId, userId } });
+
+    // Decrement the like count
+    const subComment = await SubComment.findByPk(subCommentId);
+    subComment.likeCount -= 1;
+    await subComment.save();
+
+    res.status(200).json({ message: 'Sub-comment unliked successfully' });
+  } catch (error) {
+    console.error('Error unliking sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
