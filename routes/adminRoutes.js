@@ -45,4 +45,6 @@ router.get('/getAllMyParties', adminController.getAllMyParties);
 router.put('/updateMyParty/:id', adminController.updateMyParty);
 router.delete('/deleteMyParty/:id', adminController.deleteMyParty);
 
+router.get('/getActiveAdminRoles', adminController.getActiveAdminRoles);
+
 module.exports = router;

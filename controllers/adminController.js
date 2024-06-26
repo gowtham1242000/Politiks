@@ -616,3 +616,18 @@ exports.deleteMyParty = async (req, res) => {
   }
 };
 
+
+
+exports.getActiveAdminRoles = async (req, res) => {
+  try {
+      const activeAdminRoles = await AdminRole.findAll({
+          where: { status: 'active' },
+          attributes: ['id', 'name']
+      });
+
+      res.status(200).json(activeAdminRoles);
+  } catch (error) {
+      console.error('Error fetching active admin roles:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
