@@ -24,6 +24,10 @@ const Post = sequelize.define('Post', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  likeCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0, // Default value for like count
+}
 });
 
 

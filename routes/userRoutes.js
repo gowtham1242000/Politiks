@@ -76,6 +76,8 @@ router.get('/getFollowing/:userId' , userController.getFollowing);
 
 router.get('/suggestions/:userId' , userController.suggestions);
 
+router.post('/likeUnlikePost/:postId', userController.likeUnlikePost);
+
 
 module.exports = router;
 

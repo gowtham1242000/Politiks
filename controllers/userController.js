@@ -9,6 +9,7 @@ const UserForgetOtp = require('../models/UserForgetOtp');
 const fs = require('fs');
 const path = require('path');
 const Post = require('../models/Post');
+const PostLike = require('../models/PostLike');
 
 const Country = require('../models/Country');
 const State = require('../models/State');
@@ -2225,5 +2226,56 @@ exports.suggestions = async (req, res) => {
   } catch (error) {
     console.error('Error fetching suggestions:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.likeUnlikePost = async (req, res) => {
+  const postId = req.params.postId;
+  const { userId } = req.body;
+
+  try {
+      // Check if the user has already liked the post
+      const existingLike = await PostLike.findOne({
+          where: {
+              postId,
+              userId
+          }
+      });
+
+      if (existingLike) {
+          // Unlike the post if already liked
+          await PostLike.destroy({
+              where: {
+                  postId,
+                  userId
+              }
+          });
+
+          // Decrease likeCount in Post table
+          await Post.decrement('likeCount', {
+              where: { id: postId },
+              by: 1
+          });
+
+          res.status(200).json({ message: 'Post unliked successfully' });
+      } else {
+          // Like the post if not already liked
+          await PostLike.create({
+              postId,
+              userId
+          });
+
+          // Increase likeCount in Post table
+          await Post.increment('likeCount', {
+              where: { id: postId },
+              by: 1
+          });
+
+          res.status(201).json({ message: 'Post liked successfully' });
+      }
+  } catch (error) {
+      console.error('Error liking/unliking post:', error);
+      res.status(500).json({ message: 'Internal server error' });
   }
 };
