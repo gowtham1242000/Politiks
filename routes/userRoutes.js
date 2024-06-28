@@ -31,9 +31,6 @@ router.post('/createPassword', userController.createPassword);
 
 
 
-//handle follower and following
-router.post('/following/:id', userController.following);
-router.get('/getFollowingList/:id', userController.getFollowingList);
 //Post
 router.post('/createPost/:id', userController.createPost);
 router.get('/getUserList/:id', userController.getUserList);
@@ -67,6 +64,13 @@ router.post('/unlikeComment/:commentId', userController.unlikeComment);
 
 router.post('/likeSubComment/:commentId', userController.likeSubComment);
 router.post('/unlikeSubComment/:commentId', userController.unlikeSubComment);
+
+//Follow
+
+router.post('/followUser/:userId', userController.followUser);
+router.post('/unfollowUser/:userId', userController.unfollowUser);
+router.get('/getFollowers/:userId' , userController.getFollowers);
+router.get('/getFollowing/:userId' , userController.getFollowing);
 
 module.exports = router;
 

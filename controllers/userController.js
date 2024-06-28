@@ -3,7 +3,7 @@ const Interest = require('../models/Interest');
 const UserDetails = require('../models/UserDetail');
 const UserInterest = require('../models/UserInterest');
 const LeaderVerify = require('../models/LeaderVerify');
-const Following = require('../models/Following');
+const Follow = require('../models/Follow');
 //const { Sequelize } = require('../models');
 const UserForgetOtp = require('../models/UserForgetOtp');
 const fs = require('fs');
@@ -559,22 +559,22 @@ console.log("interestNames----------",interestNames);
 
 //handle followers and following
 
-    exports.following = async(req,res) =>{
-        console.log("req.body-------",req.body)
-    const {followerId } = req.body;
+  //   exports.following = async(req,res) =>{
+  //       console.log("req.body-------",req.body)
+  //   const {followerId } = req.body;
 
-    const userId = req.params.id;
+  //   const userId = req.params.id;
   
-    try {
-      // Create a new following relationship
-      const newFollowing = await Following.create({ userId, followerId });
+  //   try {
+  //     // Create a new following relationship
+  //     const newFollowing = await Following.create({ userId, followerId });
   
-      res.status(201).json({ message: 'User followed successfully', following: newFollowing });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal Server Error' });
-    }
-  };
+  //     res.status(201).json({ message: 'User followed successfully', following: newFollowing });
+  //   } catch (error) {
+  //     console.error(error);
+  //     res.status(500).json({ message: 'Internal Server Error' });
+  //   }
+  // };
 
 /*
 exports.getFollowingList = async (req, res) => {
@@ -604,49 +604,49 @@ exports.getFollowingList = async (req, res) => {
 };
 */
 
-exports.getFollowingList = async (req, res) => {
-  const userId = req.params.id; // Assuming userId is passed in the headers
+// exports.getFollowingList = async (req, res) => {
+//   const userId = req.params.id; // Assuming userId is passed in the headers
 
-  try {
-    // Find all entries in Following table where userId matches the provided userId
-    const followingList = await Following.findAll({
-      where: {
-        userId: userId,
-      },
-      attributes: ['followerId'], // Specify the attributes you want to retrieve
-    });
+//   try {
+//     // Find all entries in Following table where userId matches the provided userId
+//     const followingList = await Following.findAll({
+//       where: {
+//         userId: userId,
+//       },
+//       attributes: ['followerId'], // Specify the attributes you want to retrieve
+//     });
 
-    if (!followingList) {
-      return res.status(404).json({ message: 'No following found for the user' });
-    }
+//     if (!followingList) {
+//       return res.status(404).json({ message: 'No following found for the user' });
+//     }
 
-    // Extract followerIds from followingList
-    const followerIds = followingList.map(entry => entry.followerId);
+//     // Extract followerIds from followingList
+//     const followerIds = followingList.map(entry => entry.followerId);
 
-    // Count the number of followers for each user
-    const followerCount = await Following.count({
-      where: {
-        userId: userId,
-      },
-    });
+//     // Count the number of followers for each user
+//     const followerCount = await Following.count({
+//       where: {
+//         userId: userId,
+//       },
+//     });
 
-    res.json({ followingList: followerIds, followerCount: followerCount });
-  } catch (error) {
-    console.error('Error fetching following list:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
+//     res.json({ followingList: followerIds, followerCount: followerCount });
+//   } catch (error) {
+//     console.error('Error fetching following list:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// };
   
-  const saveImage = (file, userId) => {
-    const userDir = path.join('/etc/ec/data/post', userId.toString());
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
+//   const saveImage = (file, userId) => {
+//     const userDir = path.join('/etc/ec/data/post', userId.toString());
+//     if (!fs.existsSync(userDir)) {
+//       fs.mkdirSync(userDir, { recursive: true });
+//     }
   
-    const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
-    fs.writeFileSync(filePath, file.data);
-    return filePath;
-  };
+//     const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
+//     fs.writeFileSync(filePath, file.data);
+//     return filePath;
+//   };
   
   exports.createPost = async (req, res) => {
     const { tagUser, caption, location } = req.body;
@@ -1483,18 +1483,18 @@ exports.getCommentsByPostId = async (req, res) => {
   }
 };
 
-exports.createSubComment = async (req, res) => {
-  const { userId, commentId, subComment } = req.body;
+  exports.createSubComment = async (req, res) => {
+    const { userId, commentId, subComment } = req.body;
 
-  try {
-      const newSubComment = await SubComment.create({ userId, commentId, subComment });
-console.log("newSubComment---------",newSubComment)
-      res.status(201).json({ message: 'SubComment created successfully', newSubComment });
-  } catch (error) {
-      console.error('Error creating subComment:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
-};
+    try {
+        const newSubComment = await SubComment.create({ userId, commentId, subComment });
+  console.log("newSubComment---------",newSubComment)
+        res.status(201).json({ message: 'SubComment created successfully', newSubComment });
+    } catch (error) {
+        console.error('Error creating subComment:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+  };
 
 
 exports.likeComment = async (req, res) => {
@@ -1603,6 +1603,84 @@ exports.unlikeSubComment = async (req, res) => {
     res.status(200).json({ message: 'Sub-comment unliked successfully' });
   } catch (error) {
     console.error('Error unliking sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.followUser = async (req, res) => {
+  const userId = req.params.userId;
+  const { followerId } = req.body;
+
+  try {
+    const user = await User.findByPk(userId);
+    const follower = await User.findByPk(followerId);
+
+    if (!user || !follower) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await Follow.create({ followerId, followingId: userId });
+
+    res.status(201).json({ message: 'User followed successfully' });
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.unfollowUser = async (req, res) => {
+  const userId = req.params.userId;
+  const { followerId } = req.body;
+
+  try {
+    const follow = await Follow.findOne({ where: { followerId, followingId: userId } });
+
+    if (!follow) {
+      return res.status(404).json({ message: 'Follow relationship not found' });
+    }
+
+    await follow.destroy();
+
+    res.status(200).json({ message: 'User unfollowed successfully' });
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.getFollowers = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const followers = await Follow.findAll({ where: { followingId: userId } });
+
+    const followerIds = followers.map(follow => follow.followerId);
+    const followerDetails = await User.findAll({ where: { id: followerIds } });
+
+    res.status(200).json(followerDetails);
+  } catch (error) {
+    console.error('Error fetching followers:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+
+exports.getFollowing = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const followings = await Follow.findAll({ where: { followerId: userId } });
+
+    const followingIds = followings.map(follow => follow.followingId);
+    const followingDetails = await User.findAll({ where: { id: followingIds } });
+
+    res.status(200).json(followingDetails);
+  } catch (error) {
+    console.error('Error fetching following:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
