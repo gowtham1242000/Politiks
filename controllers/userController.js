@@ -1487,7 +1487,7 @@ exports.getCommentsByPostId = async (req, res) => {
 
 exports.getCommentsByPostId = async (req, res) => {
   const postId = req.params.id;
-
+/*
   try {
       // Fetch comments by postId
       const comments = await Comment.findAll({ where: { postId } });
@@ -1531,8 +1531,253 @@ exports.getCommentsByPostId = async (req, res) => {
   } catch (error) {
       console.error('Error fetching comments:', error);
       res.status(500).json({ message: 'Internal server error' });
+  }*/
+/*
+try {
+    // Fetch comments by postId
+    const comments = await Comment.findAll({ where: { postId } });
+
+    // Create an array of commentIds from the comments
+    const commentIds = comments.map(comment => comment.id);
+
+    // Fetch subComments for those commentIds
+    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
+
+    // Fetch user details for the users who made comments
+    const userIds = [...new Set(comments.map(comment => comment.userId))]; // Get unique userIds
+    const userDetails = await UserDetails.findAll({ where: { userId: userIds } });
+
+    // Create a map of userId to userDetails with specific fields
+    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
+      acc[userDetail.userId] = {
+        id: userDetail.id,
+        userId: userDetail.userId,
+        role: userDetail.role,
+        userName: userDetail.userName,
+        userProfile: userDetail.userProfile,
+        commentedAt: null // Will be updated later
+      };
+      return acc;
+    }, {});
+
+    // Create a map of commentId to subComments
+    const subCommentsMap = subComments.reduce((acc, subComment) => {
+      if (!acc[subComment.commentId]) {
+        acc[subComment.commentId] = [];
+      }
+      acc[subComment.commentId].push({
+        ...subComment.toJSON(),
+        commentedAt: subComment.createdAt,
+        createdAt: undefined,
+        updatedAt: undefined
+      });
+      return acc;
+    }, {});
+
+    // Attach user details and subComments to the comments
+    const commentsWithUserDetailsAndSubComments = comments.map(comment => {
+      const userDetail = userDetailsMap[comment.userId] || null;
+      if (userDetail) {
+        userDetail.commentedAt = comment.createdAt; // Update commentedAt field
+      }
+      return {
+        ...comment.toJSON(),
+        subComments: subCommentsMap[comment.id] || [],
+        userDetails: userDetail,
+        commentedAt: comment.createdAt,
+        createdAt: undefined,
+        updatedAt: undefined
+      };
+    });
+
+    // Calculate counts
+    const commentCount = comments.length;
+    const subCommentCount = subComments.length;
+
+    // Add counts to the response
+    const response = {
+      commentCount,
+      subCommentCount,
+      comments: commentsWithUserDetailsAndSubComments
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }*/
+/*
+ try {
+    // Fetch comments by postId
+    const comments = await Comment.findAll({ where: { postId } });
+
+    // Create an array of commentIds from the comments
+    const commentIds = comments.map(comment => comment.id);
+
+    // Fetch subComments for those commentIds
+    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
+
+    // Fetch user details for the users who made comments and sub-comments
+    const commentUserIds = [...new Set(comments.map(comment => comment.userId))];
+    const subCommentUserIds = [...new Set(subComments.map(subComment => subComment.userId))];
+    const allUserIds = [...new Set([...commentUserIds, ...subCommentUserIds])]; // Get unique userIds
+    const userDetails = await UserDetails.findAll({ where: { userId: allUserIds } });
+
+    // Create a map of userId to userDetails with specific fields
+    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
+      acc[userDetail.userId] = {
+        id: userDetail.id,
+        userId: userDetail.userId,
+        role: userDetail.role,
+        userName: userDetail.userName,
+        userProfile: userDetail.userProfile,
+        commentedAt: null // Will be updated later
+      };
+      return acc;
+    }, {});
+
+    // Create a map of commentId to subComments
+    const subCommentsMap = subComments.reduce((acc, subComment) => {
+      if (!acc[subComment.commentId]) {
+        acc[subComment.commentId] = [];
+      }
+      const userDetail = userDetailsMap[subComment.userId] || null;
+      const subCommentWithUserDetail = {
+        ...subComment.toJSON(),
+        userDetails: userDetail ? {
+          id: userDetail.id,
+          userId: userDetail.userId,
+          role: userDetail.role,
+          userName: userDetail.userName,
+          userProfile: userDetail.userProfile,
+          commentedAt: subComment.createdAt
+        } : null,
+        commentedAt: subComment.createdAt,
+        createdAt: undefined,
+        updatedAt: undefined
+      };
+      acc[subComment.commentId].push(subCommentWithUserDetail);
+      return acc;
+    }, {});
+
+    // Attach user details and subComments to the comments
+    const commentsWithUserDetailsAndSubComments = comments.map(comment => {
+      const userDetail = userDetailsMap[comment.userId] || null;
+      return {
+        ...comment.toJSON(),
+        subComments: subCommentsMap[comment.id] || [],
+        userDetails: userDetail ? {
+          id: userDetail.id,
+          userId: userDetail.userId,
+          role: userDetail.role,
+          userName: userDetail.userName,
+          userProfile: userDetail.userProfile,
+          commentedAt: comment.createdAt
+        } : null,
+        commentedAt: comment.createdAt,
+        createdAt: undefined,
+        updatedAt: undefined
+      };
+    });
+
+    // Calculate counts
+    const commentCount = comments.length;
+    const subCommentCount = subComments.length;
+
+    // Add counts to the response
+    const response = {
+      commentCount,
+      subCommentCount,
+      comments: commentsWithUserDetailsAndSubComments
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }*/
+try {
+    // Fetch comments by postId
+    const comments = await Comment.findAll({ where: { postId } });
+
+    // Create an array of commentIds from the comments
+    const commentIds = comments.map(comment => comment.id);
+
+    // Fetch subComments for those commentIds
+    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
+
+    // Fetch user details for the users who made comments and sub-comments
+    const commentUserIds = [...new Set(comments.map(comment => comment.userId))];
+    const subCommentUserIds = [...new Set(subComments.map(subComment => subComment.userId))];
+    const allUserIds = [...new Set([...commentUserIds, ...subCommentUserIds])]; // Get unique userIds
+    const userDetails = await UserDetails.findAll({ where: { userId: allUserIds } });
+
+    // Create a map of userId to userDetails with specific fields
+    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
+      acc[userDetail.userId] = {
+        id: userDetail.id,
+        userId: userDetail.userId,
+        role: userDetail.role,
+        userName: userDetail.userName,
+        userProfile: userDetail.userProfile,
+      };
+      return acc;
+    }, {});
+
+    // Create a map of commentId to subComments
+    const subCommentsMap = subComments.reduce((acc, subComment) => {
+      if (!acc[subComment.commentId]) {
+        acc[subComment.commentId] = [];
+      }
+      const userDetail = userDetailsMap[subComment.userId] || {};
+      acc[subComment.commentId].push({
+        id: subComment.id,
+        userId: subComment.userId,
+        commentId: subComment.commentId,
+        subComment: subComment.subComment,
+        userDetails: {
+          ...userDetail,
+          commentedAt: new Date(subComment.createdAt).toLocaleTimeString()
+        }
+      });
+      return acc;
+    }, {});
+
+    // Attach user details and subComments to the comments
+    const commentsWithUserDetailsAndSubComments = comments.map(comment => {
+      const userDetail = userDetailsMap[comment.userId] || {};
+      return {
+        id: comment.id,
+        userId: comment.userId,
+        postId: comment.postId,
+        content: comment.content,
+        userDetails: {
+          ...userDetail,
+          commentedAt: new Date(comment.createdAt).toLocaleTimeString()
+        },
+        subComments: subCommentsMap[comment.id] || []
+      };
+    });
+
+    // Calculate counts
+    const commentCount = comments.length;
+    const subCommentCount = subComments.length;
+
+    // Add counts to the response
+    const response = {
+      commentCount,
+      subCommentCount,
+      comments: commentsWithUserDetailsAndSubComments
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
+
 };
+
 
   exports.createSubComment = async (req, res) => {
     const { userId, commentId, subComment } = req.body;
@@ -1547,7 +1792,7 @@ exports.getCommentsByPostId = async (req, res) => {
     }
   };
 
-
+/*
 exports.likeComment = async (req, res) => {
   const commentId = req.params.commentId;
   const { userId } = req.body;
@@ -1574,8 +1819,36 @@ exports.likeComment = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
 
+exports.likeComment = async (req, res) => {
+  const commentId = req.params.commentId;
+  const { userId } = req.body;
 
+  try {
+    // Check if the user has already liked this comment
+    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
+
+    if (existingLike) {
+      return res.status(400).json({ message: 'User has already liked this comment', liked: false });
+    }
+
+    // Create a new like entry
+    await CommentLike.create({ commentId, userId });
+
+    // Increment the like count
+    const comment = await Comment.findByPk(commentId);
+    comment.likeCount += 1;
+    await comment.save();
+
+    res.status(200).json({ message: 'Comment liked successfully', liked: true });
+  } catch (error) {
+    console.error('Error liking comment:', error);
+    res.status(500).json({ message: 'Internal server error', liked: false });
+  }
+};
+
+/*
 exports.unlikeComment = async (req, res) => {
   const commentId = req.params.commentId;
   const { userId } = req.body;
@@ -1602,8 +1875,59 @@ exports.unlikeComment = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+exports.unlikeComment = async (req, res) => {
+  const commentId = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the like entry exists
+    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
+
+    if (!existingLike) {
+      return res.status(400).json({ message: 'User has not liked this comment', unliked: false });
+    }
+
+    // Remove the like entry
+    await CommentLike.destroy({ where: { commentId, userId } });
+
+    // Decrement the like count
+    const comment = await Comment.findByPk(commentId);
+    comment.likeCount -= 1;
+    await comment.save();
+
+    res.status(200).json({ message: 'Comment unliked successfully', unliked: true });
+  } catch (error) {
+    console.error('Error unliking comment:', error);
+    res.status(500).json({ message: 'Internal server error', unliked: false });
+  }
+};
 
 exports.likeSubComment = async (req, res) => {
+/*  const  subCommentId = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the user has already liked this sub-comment
+    const existingLike = await SubCommentLike.findOne({ where: { subCommentId, userId } });
+
+    if (existingLike) {
+      return res.status(400).json({ message: 'User has already liked this sub-comment' });
+    }
+
+    // Create a new like entry
+    await SubCommentLike.create({ subCommentId, userId });
+
+    // Increment the like count
+    const subComment = await SubComment.findByPk(subCommentId);
+    subComment.likeCount += 1;
+    await subComment.save();
+
+    res.status(200).json({ message: 'Sub-comment liked successfully' });
+  } catch (error) {
+    console.error('Error liking sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }*/
   const  subCommentId = req.params.commentId;
   const { userId } = req.body;
 
@@ -1628,9 +1952,10 @@ exports.likeSubComment = async (req, res) => {
     console.error('Error liking sub-comment:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
+
 };
 
-
+/*
 exports.unlikeSubComment = async (req, res) => {
   const subCommentId  = req.params.commentId;
   const { userId } = req.body;
@@ -1657,6 +1982,33 @@ exports.unlikeSubComment = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+exports.unlikeSubComment = async (req, res) => {
+  const subCommentId = req.params.subCommentId; // Corrected parameter name
+  const { userId } = req.body;
+
+  try {
+    // Check if the like entry exists
+    const existingLike = await SubCommentLike.findOne({ where: { subCommentId, userId } });
+
+    if (!existingLike) {
+      return res.status(400).json({ message: 'User has not liked this sub-comment', unliked: false });
+    }
+
+    // Remove the like entry
+    await SubCommentLike.destroy({ where: { subCommentId, userId } });
+
+    // Decrement the like count
+    const subComment = await SubComment.findByPk(subCommentId);
+    subComment.likeCount -= 1;
+    await subComment.save();
+
+    res.status(200).json({ message: 'Sub-comment unliked successfully', unliked: true });
+  } catch (error) {
+    console.error('Error unliking sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error', unliked: false });
+  }
+};
 
 
 exports.followUser = async (req, res) => {
@@ -1667,7 +2019,7 @@ exports.followUser = async (req, res) => {
     const user = await User.findByPk(userId);
     const follower = await User.findByPk(followerId);
 
-    if (!user || !follower) {
+	    if (!user || !follower) {
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -1702,16 +2054,46 @@ exports.unfollowUser = async (req, res) => {
 };
 
 
-exports.getFollowers = async (req, res) => {
+/*exports.getFollowers = async (req, res) => {
   const userId = req.params.userId;
-
+console.log("userId----------------getFollower",userId);
   try {
     const followers = await Follow.findAll({ where: { followingId: userId } });
 
     const followerIds = followers.map(follow => follow.followerId);
-    const followerDetails = await User.findAll({ where: { id: followerIds } });
+    const followerDetails = await UserDetails.findAll({ where: { userId: followerIds } });
 
     res.status(200).json(followerDetails);
+  } catch (error) {
+    console.error('Error fetching followers:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};*/
+
+exports.getFollowers = async (req, res) => {
+  const userId = req.params.userId;
+  console.log("userId----------------getFollower", userId);
+
+  try {
+    // Fetch all followers where the followingId is the userId
+    const followers = await Follow.findAll({ where: { followingId: userId } });
+
+    // Map the followerIds from the followers data
+    const followerIds = followers.map(follow => follow.followerId);
+
+    // Fetch the details of the followers
+    const followerDetails = await UserDetails.findAll({ where: { userId: followerIds } });
+
+    // Calculate the count of followers
+    const followerCount = followerDetails.length;
+
+    // Create the response object including the follower count
+    const response = {
+      followerCount,
+      followerDetails
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error fetching followers:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -1720,6 +2102,7 @@ exports.getFollowers = async (req, res) => {
 
 
 
+/*
 exports.getFollowing = async (req, res) => {
   const userId = req.params.userId;
 
@@ -1727,7 +2110,7 @@ exports.getFollowing = async (req, res) => {
     const followings = await Follow.findAll({ where: { followerId: userId } });
 
     const followingIds = followings.map(follow => follow.followingId);
-    const followingDetails = await User.findAll({ where: { id: followingIds } });
+    const followingDetails = await UserDetails.findAll({ where: { userId: followingIds } });
 
     res.status(200).json(followingDetails);
   } catch (error) {
@@ -1735,8 +2118,73 @@ exports.getFollowing = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+
+/*
+exports.getFollowing = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    // Fetch all followings
+    const followings = await Follow.findAll({ where: { followerId: userId } });
+
+    // Map to extract following IDs
+    const followingIds = followings.map(follow => follow.followingId);
+
+    // Fetch details of all users being followed
+    const followingDetails = await UserDetails.findAll({ where: { userId: followingIds } });
+
+    // Get the count of followings
+    const followingCount = followingDetails.length;
+
+    res.status(200).json({
+      count: followingCount,
+      followings: followingDetails
+    });
+  } catch (error) {
+    console.error('Error fetching following:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
 
 
+exports.getFollowing = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    // Fetch all followings
+    const followings = await Follow.findAll({ where: { followerId: userId } });
+
+    // Map to extract following IDs
+    const followingIds = followings.map(follow => follow.followingId);
+
+    // Fetch details of all users being followed
+    const followingDetails = await UserDetails.findAll({ where: { userId: followingIds } });
+
+    // Get the count of followings
+    const followingCount = followingDetails.length;
+
+    // Create a list with additional count field for each user
+    const followingList = followingDetails.map((userDetail, index) => {
+      return {
+        ...userDetail.toJSON(),
+        count: index + 1 // Add a count field for each user
+      };
+    });
+
+    res.status(200).json({
+      count: followingCount,
+      followings: followingList
+    });
+  } catch (error) {
+    console.error('Error fetching following:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+/*
 exports.suggestions = async (req, res) => {
   const { userId } = req.params;
 
@@ -1761,6 +2209,68 @@ exports.suggestions = async (req, res) => {
     if (location) {
       locationUsers = await User.findAll({
         where: { location },
+        order: [['createdAt', 'DESC']],
+        limit: 10
+      });
+    }
+
+    // Combine both results
+    const suggestions = {
+      newUsers,
+      locationUsers
+    };
+
+    res.status(200).json(suggestions);
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+
+
+
+
+exports.suggestions = async (req, res) => {
+  const { userId } = req.params;
+
+  console.log("userId----------", userId);
+
+  try {
+    // Fetch the user details by userId to get the state
+    const userDetails = await UserDetails.findOne({
+      where: { userId },
+      attributes: ['state']
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    const location = userDetails.state;
+    console.log("location-------", location);
+
+    // Fetch newly joined users
+    const newUsers = await User.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    // Fetch location-based users
+    let locationUsers = [];
+    if (location) {
+      // Fetch user IDs based on the state
+      const locationUserDetails = await UserDetails.findAll({
+        where: { state: location },
+        attributes: ['userId']
+      });
+
+      const locationUserIds = locationUserDetails.map(detail => detail.userId);
+
+      locationUsers = await User.findAll({
+        where: {
+          id: locationUserIds
+        },
         order: [['createdAt', 'DESC']],
         limit: 10
       });
