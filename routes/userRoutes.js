@@ -72,6 +72,11 @@ router.post('/unfollowUser/:userId', userController.unfollowUser);
 router.get('/getFollowers/:userId' , userController.getFollowers);
 router.get('/getFollowing/:userId' , userController.getFollowing);
 
+//suggestion
+
+router.get('/suggestions/:userId' , userController.suggestions);
+
+
 module.exports = router;
 
 

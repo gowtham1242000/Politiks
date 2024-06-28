@@ -1684,3 +1684,46 @@ exports.getFollowing = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
+exports.suggestions = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Fetch the user by userId to get the location
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const location = user.location;
+
+    // Fetch newly joined users
+    const newUsers = await User.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    // Fetch location-based users
+    let locationUsers = [];
+    if (location) {
+      locationUsers = await User.findAll({
+        where: { location },
+        order: [['createdAt', 'DESC']],
+        limit: 10
+      });
+    }
+
+    // Combine both results
+    const suggestions = {
+      newUsers,
+      locationUsers
+    };
+
+    res.status(200).json(suggestions);
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
