@@ -1532,171 +1532,7 @@ exports.getCommentsByPostId = async (req, res) => {
       console.error('Error fetching comments:', error);
       res.status(500).json({ message: 'Internal server error' });
   }*/
-/*
-try {
-    // Fetch comments by postId
-    const comments = await Comment.findAll({ where: { postId } });
-
-    // Create an array of commentIds from the comments
-    const commentIds = comments.map(comment => comment.id);
-
-    // Fetch subComments for those commentIds
-    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
-
-    // Fetch user details for the users who made comments
-    const userIds = [...new Set(comments.map(comment => comment.userId))]; // Get unique userIds
-    const userDetails = await UserDetails.findAll({ where: { userId: userIds } });
-
-    // Create a map of userId to userDetails with specific fields
-    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
-      acc[userDetail.userId] = {
-        id: userDetail.id,
-        userId: userDetail.userId,
-        role: userDetail.role,
-        userName: userDetail.userName,
-        userProfile: userDetail.userProfile,
-        commentedAt: null // Will be updated later
-      };
-      return acc;
-    }, {});
-
-    // Create a map of commentId to subComments
-    const subCommentsMap = subComments.reduce((acc, subComment) => {
-      if (!acc[subComment.commentId]) {
-        acc[subComment.commentId] = [];
-      }
-      acc[subComment.commentId].push({
-        ...subComment.toJSON(),
-        commentedAt: subComment.createdAt,
-        createdAt: undefined,
-        updatedAt: undefined
-      });
-      return acc;
-    }, {});
-
-    // Attach user details and subComments to the comments
-    const commentsWithUserDetailsAndSubComments = comments.map(comment => {
-      const userDetail = userDetailsMap[comment.userId] || null;
-      if (userDetail) {
-        userDetail.commentedAt = comment.createdAt; // Update commentedAt field
-      }
-      return {
-        ...comment.toJSON(),
-        subComments: subCommentsMap[comment.id] || [],
-        userDetails: userDetail,
-        commentedAt: comment.createdAt,
-        createdAt: undefined,
-        updatedAt: undefined
-      };
-    });
-
-    // Calculate counts
-    const commentCount = comments.length;
-    const subCommentCount = subComments.length;
-
-    // Add counts to the response
-    const response = {
-      commentCount,
-      subCommentCount,
-      comments: commentsWithUserDetailsAndSubComments
-    };
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }*/
-/*
- try {
-    // Fetch comments by postId
-    const comments = await Comment.findAll({ where: { postId } });
-
-    // Create an array of commentIds from the comments
-    const commentIds = comments.map(comment => comment.id);
-
-    // Fetch subComments for those commentIds
-    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
-
-    // Fetch user details for the users who made comments and sub-comments
-    const commentUserIds = [...new Set(comments.map(comment => comment.userId))];
-    const subCommentUserIds = [...new Set(subComments.map(subComment => subComment.userId))];
-    const allUserIds = [...new Set([...commentUserIds, ...subCommentUserIds])]; // Get unique userIds
-    const userDetails = await UserDetails.findAll({ where: { userId: allUserIds } });
-
-    // Create a map of userId to userDetails with specific fields
-    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
-      acc[userDetail.userId] = {
-        id: userDetail.id,
-        userId: userDetail.userId,
-        role: userDetail.role,
-        userName: userDetail.userName,
-        userProfile: userDetail.userProfile,
-        commentedAt: null // Will be updated later
-      };
-      return acc;
-    }, {});
-
-    // Create a map of commentId to subComments
-    const subCommentsMap = subComments.reduce((acc, subComment) => {
-      if (!acc[subComment.commentId]) {
-        acc[subComment.commentId] = [];
-      }
-      const userDetail = userDetailsMap[subComment.userId] || null;
-      const subCommentWithUserDetail = {
-        ...subComment.toJSON(),
-        userDetails: userDetail ? {
-          id: userDetail.id,
-          userId: userDetail.userId,
-          role: userDetail.role,
-          userName: userDetail.userName,
-          userProfile: userDetail.userProfile,
-          commentedAt: subComment.createdAt
-        } : null,
-        commentedAt: subComment.createdAt,
-        createdAt: undefined,
-        updatedAt: undefined
-      };
-      acc[subComment.commentId].push(subCommentWithUserDetail);
-      return acc;
-    }, {});
-
-    // Attach user details and subComments to the comments
-    const commentsWithUserDetailsAndSubComments = comments.map(comment => {
-      const userDetail = userDetailsMap[comment.userId] || null;
-      return {
-        ...comment.toJSON(),
-        subComments: subCommentsMap[comment.id] || [],
-        userDetails: userDetail ? {
-          id: userDetail.id,
-          userId: userDetail.userId,
-          role: userDetail.role,
-          userName: userDetail.userName,
-          userProfile: userDetail.userProfile,
-          commentedAt: comment.createdAt
-        } : null,
-        commentedAt: comment.createdAt,
-        createdAt: undefined,
-        updatedAt: undefined
-      };
-    });
-
-    // Calculate counts
-    const commentCount = comments.length;
-    const subCommentCount = subComments.length;
-
-    // Add counts to the response
-    const response = {
-      commentCount,
-      subCommentCount,
-      comments: commentsWithUserDetailsAndSubComments
-    };
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }*/
-try {
+/*try {
     // Fetch comments by postId
     const comments = await Comment.findAll({ where: { postId } });
 
@@ -1774,7 +1610,110 @@ try {
   } catch (error) {
     console.error('Error fetching comments:', error);
     res.status(500).json({ message: 'Internal server error' });
-  }
+  }*/
+try {
+  // Fetch comments by postId
+  const comments = await Comment.findAll({ where: { postId } });
+
+  // Create an array of commentIds from the comments
+  const commentIds = comments.map(comment => comment.id);
+
+  // Fetch subComments for those commentIds
+  const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
+
+  // Extract unique userIds from comments and subComments
+  const commentUserIds = [...new Set(comments.map(comment => comment.userId))];
+  const subCommentUserIds = [...new Set(subComments.map(subComment => subComment.userId))];
+  const allUserIds = [...new Set([...commentUserIds, ...subCommentUserIds])]; // Get unique userIds
+
+  // Fetch user details for allUserIds
+  const userDetails = await UserDetails.findAll({ where: { userId: allUserIds } });
+
+  // Create a map of userId to userDetails with specific fields
+  const userDetailsMap = userDetails.reduce((acc, userDetail) => {
+    acc[userDetail.userId] = {
+      id: userDetail.id,
+      userId: userDetail.userId,
+      role: userDetail.role,
+      userName: userDetail.userName,
+      userProfile: userDetail.userProfile,
+    };
+    return acc;
+  }, {});
+
+  // Fetch likes for comments by commentUserIds
+  const commentLikes = await CommentLike.findAll({ where: { userId: commentUserIds, commentId: commentIds } });
+  const commentLikesMap = commentLikes.reduce((acc, like) => {
+    if (!acc[like.commentId]) {
+      acc[like.commentId] = {};
+    }
+    acc[like.commentId][like.userId] = true; // Set liked to true for comments liked by the user
+    return acc;
+  }, {});
+
+  // Fetch likes for sub-comments by subCommentUserIds
+  const subCommentLikes = await SubCommentLike.findAll({ where: { userId: subCommentUserIds, subCommentId: subComments.map(sc => sc.id) } });
+  const subCommentLikesMap = subCommentLikes.reduce((acc, like) => {
+    if (!acc[like.subCommentId]) {
+      acc[like.subCommentId] = {};
+    }
+    acc[like.subCommentId][like.userId] = true; // Set liked to true for sub-comments liked by the user
+    return acc;
+  }, {});
+
+  // Create a map of commentId to subComments
+  const subCommentsMap = subComments.reduce((acc, subComment) => {
+    if (!acc[subComment.commentId]) {
+      acc[subComment.commentId] = [];
+    }
+    const userDetail = userDetailsMap[subComment.userId] || {};
+    acc[subComment.commentId].push({
+      id: subComment.id,
+      userId: subComment.userId,
+      commentId: subComment.commentId,
+      subComment: subComment.subComment,
+      userDetails: {
+        ...userDetail,
+        commentedAt: new Date(subComment.createdAt).toLocaleTimeString()
+      },
+      liked: subCommentLikesMap[subComment.id] ? subCommentLikesMap[subComment.id][subComment.userId] || false : false // Set liked flag based on subCommentLikesMap for the specific user
+    });
+    return acc;
+  }, {});
+
+  // Attach user details and subComments to the comments
+  const commentsWithUserDetailsAndSubComments = comments.map(comment => {
+    const userDetail = userDetailsMap[comment.userId] || {};
+    return {
+      id: comment.id,
+      userId: comment.userId,
+      postId: comment.postId,
+      content: comment.content,
+      userDetails: {
+        ...userDetail,
+        commentedAt: new Date(comment.createdAt).toLocaleTimeString()
+      },
+      subComments: subCommentsMap[comment.id] || [],
+      liked: commentLikesMap[comment.id] ? commentLikesMap[comment.id][comment.userId] || false : false // Set liked flag based on commentLikesMap for the specific user
+    };
+  });
+
+  // Calculate counts
+  const commentCount = comments.length;
+  const subCommentCount = subComments.length;
+
+  // Construct final response
+  const response = {
+    commentCount,
+    subCommentCount,
+    comments: commentsWithUserDetailsAndSubComments
+  };
+
+  res.status(200).json(response);
+} catch (error) {
+  console.error('Error fetching comments:', error);
+  res.status(500).json({ message: 'Internal server error' });
+}
 
 };
 
