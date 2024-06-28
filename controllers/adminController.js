@@ -382,6 +382,8 @@ exports.getAllAdminRole = async (req, res) => {
 
       return {
         name: role.name,
+        id: role.id,
+        status: role.status,
         accessPermissions: formattedPermissions
       };
     });
