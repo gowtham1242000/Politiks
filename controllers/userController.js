@@ -677,109 +677,7 @@ console.log("post-----",post)
     }
   };
 
-/*exports.getAllPost =async (req,res)=>{
-    try{
-
-        const post =await Post.findAll();
-        console.log("post--------",post);
-        res.status(200).json(post)
-
-    }catch(error){
-        res.status(500).json({message:'Internal server Error'})
-    }
-  }
-*/
-
-/*exports.getAllPost = async (req, res) => {
-  try {
-    // Find all posts in descending order
-    const posts = await Post.findAll({
-      order: [['createdAt', 'DESC']] // Adjust the column name if necessary
-    });
-
-    console.log("posts--------", posts);
-    res.status(200).json(posts);
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};*/
 /*
-exports.getAllPost = async (req, res) => {
-    try {
-      // Step 1: Fetch all posts in descending order of createdAt
-      const posts = await Post.findAll({
-        order: [['createdAt', 'DESC']],
-      });
-  
-      // Step 2: Extract userIds from posts
-      const userIds = posts.map(post => post.userId);
-  
-      // Step 3: Fetch user details for the extracted userIds
-      const userDetails = await UserDetails.findAll({
-        where: { userId: userIds },
-        attributes: ['userId', 'userName', 'country'] // Adjust attributes as needed
-      });
-  
-      // Step 4: Combine posts and user details into a single response
-      const postsWithUserDetails = posts.map(post => {
-        const userDetail = userDetails.find(detail => detail.userId === post.userId);
-        return {
-          id: post.id,
-          userId: post.userId,
-          image: post.image,
-          location: post.location,
-          tagUser: post.tagUser,
-          caption: post.caption,
-          userDetails: userDetail // Attach user details to each post
-        };
-      });
-  
-      res.status(200).json(postsWithUserDetails);
-    } catch (error) {
-      console.error('Error fetching posts with user details:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  };
-*/
-/*
-exports.getAllPost = async (req, res) => {
-  try {
-    // Step 1: Fetch all posts in descending order of createdAt
-    const posts = await Post.findAll({
-      order: [['createdAt', 'DESC']],
-    });
-
-    // Step 2: Extract userIds from posts
-    const userIds = posts.map(post => post.userId);
-
-    // Step 3: Fetch user details for the extracted userIds
-    const userDetails = await UserDetails.findAll({
-      where: { userId: userIds },
-    });
-
-    // Step 4: Combine posts and user details into a single response
-    const postsWithUserDetails = posts.map(post => {
-      const userDetail = userDetails.find(detail => detail.userId === post.userId);
-      return {
-        id: post.id,
-        userId: post.userId,
-        image: post.image,
-        location: post.location,
-        tagUser: post.tagUser,
-        caption: post.caption,
-        userDetails: userDetail // Attach user details to each post
-      };
-    });
-
-    res.status(200).json(postsWithUserDetails);
-  } catch (error) {
-    console.error('Error fetching posts with user details:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-
 exports.getAllPost = async (req, res) => {
   const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
   console.log("User ID from request params:", userId);
@@ -844,7 +742,97 @@ exports.getAllPost = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
 
+exports.getAllPost = async (req, res) => {
+  const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
+  console.log("User ID from request params:", userId);
+
+  try {
+    // Step 1: Fetch all posts in descending order of createdAt
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Step 2: Extract postIds and userIds from posts
+    const postIds = posts.map(post => post.id);
+    const userIds = posts.map(post => post.userId);
+    const originalPostIds = posts.map(post => post.originalPostId).filter(id => id !== null);
+
+    // Step 3: Fetch user details for the extracted userIds
+    const userDetails = await UserDetails.findAll({
+      where: { userId: userIds },
+    });
+
+    // Step 4: Fetch all likes and comments for the posts
+    const postLikes = await PostLike.findAll({
+      where: { postId: postIds },
+    });
+    const postComments = await Comment.findAll({
+      where: { postId: postIds },
+    });
+
+    // Step 5: Fetch original posts if they exist
+    const originalPosts = await Post.findAll({
+      where: { id: originalPostIds },
+    });
+
+    const originalPostDetails = await Promise.all(originalPosts.map(async originalPost => {
+      const userDetail = await UserDetails.findOne({
+        where: { userId: originalPost.userId },
+      });
+      return {
+        id: originalPost.id,
+        userId: originalPost.userId,
+        image: originalPost.image,
+        location: originalPost.location,
+        tagUser: originalPost.tagUser,
+        caption: originalPost.caption,
+        userDetails: userDetail,
+      };
+    }));
+
+    // Create a map for quick access to original post details
+    const originalPostMap = {};
+    originalPostDetails.forEach(detail => {
+      originalPostMap[detail.id] = detail;
+    });
+
+    console.log("Post likes fetched:", postLikes);
+    console.log("Post comments fetched:", postComments);
+
+    // Step 6: Combine posts, user details, like count, comment count, liked flag, and original post details into a single response
+    const postsWithDetails = posts.map(post => {
+      const userDetail = userDetails.find(detail => detail.userId === post.userId);
+      const likeCount = postLikes.filter(like => like.postId === post.id).length;
+      const commentCount = postComments.filter(comment => comment.postId === post.id).length;
+      
+      const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
+      const originalPostDetail = post.originalPostId ? originalPostMap[post.originalPostId] : null;
+
+      console.log("originalPostDetail---------",originalPostDetail);
+
+      return {
+        id: post.id,
+        userId: post.userId,
+        image: post.image,
+        location: post.location,
+        tagUser: post.tagUser,
+        caption: post.caption,
+        likeCount: likeCount,
+        commentCount: commentCount,
+        liked: liked,
+        userDetails: userDetail, // Attach user details to each post
+        originalPostDetails: originalPostDetail, // Attach original post details if available
+      };
+    });
+
+    res.status(200).json(postsWithDetails);
+  } catch (error) {
+    console.error('Error fetching posts with details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 
 
@@ -2382,3 +2370,31 @@ exports.likedUserList = async(req,res)=>{
     res.status(500).json({ message: 'Internal server error' });
 }
 }
+
+exports.createRepost = async (req, res) => {
+  const postId = req.params.postId;
+  const { userId, caption, tagUser, location } = req.body;
+
+  try {
+    // Check if the original post exists
+    const originalPost = await Post.findByPk(postId);
+    if (!originalPost) {
+      return res.status(404).json({ message: 'Original post not found' });
+    }
+
+    // Create a new post with the new details or fallback to original post details
+    const newPost = await Post.create({
+      userId,
+      image: originalPost.image,
+      location: location || originalPost.location,
+      tagUser: tagUser || originalPost.tagUser,
+      caption: caption || originalPost.caption,
+      originalPostId: postId
+    });
+
+    res.status(201).json({ message: 'Post reposted successfully', newPost });
+  } catch (error) {
+    console.error('Error reposting:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};

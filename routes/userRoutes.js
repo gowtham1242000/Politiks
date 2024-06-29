@@ -80,6 +80,9 @@ router.post('/likeUnlikePost/:postId', userController.likeUnlikePost);
 
 router.get('/likedUserList/:postId', userController.likedUserList);
 
+//Repost
+
+router.post('/createRepost/:postId', userController.createRepost);
 
 module.exports = router;
 
