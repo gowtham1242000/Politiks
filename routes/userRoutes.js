@@ -34,7 +34,7 @@ router.post('/createPassword', userController.createPassword);
 //Post
 router.post('/createPost/:id', userController.createPost);
 router.get('/getUserList/:id', userController.getUserList);
-router.get('/getAllPost', userController.getAllPost);
+router.get('/getAllPost/:userId', userController.getAllPost);
 //Leader verification
 router.post('/uploadVerificationFiles/:id', userController.uploadVerificationFiles)
 

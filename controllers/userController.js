@@ -742,7 +742,7 @@ exports.getAllPost = async (req, res) => {
     }
   };
 */
-
+/*
 exports.getAllPost = async (req, res) => {
   try {
     // Step 1: Fetch all posts in descending order of createdAt
@@ -778,6 +778,76 @@ exports.getAllPost = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+
+exports.getAllPost = async (req, res) => {
+  const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
+  console.log("User ID from request params:", userId);
+
+  try {
+    // Step 1: Fetch all posts in descending order of createdAt
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Step 2: Extract postIds and userIds from posts
+    const postIds = posts.map(post => post.id);
+    const userIds = posts.map(post => post.userId);
+
+    // Step 3: Fetch user details for the extracted userIds
+    const userDetails = await UserDetails.findAll({
+      where: { userId: userIds },
+    });
+
+    // Step 4: Fetch all likes and comments for the posts
+    const postLikes = await PostLike.findAll({
+      where: { postId: postIds },
+    });
+    const postComments = await Comment.findAll({
+      where: { postId: postIds },
+    });
+
+    console.log("Post likes fetched:", postLikes);
+    console.log("Post comments fetched:", postComments);
+
+    // Step 5: Combine posts, user details, like count, comment count, and liked flag into a single response
+    const postsWithDetails = posts.map(post => {
+      const userDetail = userDetails.find(detail => detail.userId === post.userId);
+      const likeCount = postLikes.filter(like => like.postId === post.id).length;
+      const commentCount = postComments.filter(comment => comment.postId === post.id).length;
+      
+      // Debugging
+      console.log(`Post ID: ${post.id}`);
+      console.log(`Likes for Post ID ${post.id}:`, postLikes.filter(like => like.postId === post.id));
+      console.log(`User ID from likes:`, postLikes.filter(like => like.postId === post.id).map(like => like.userId));
+
+      const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
+      console.log(`Liked status for Post ID ${post.id} by User ID ${userId}:`, liked);
+
+      return {
+        id: post.id,
+        userId: post.userId,
+        image: post.image,
+        location: post.location,
+        tagUser: post.tagUser,
+        caption: post.caption,
+        likeCount: likeCount,
+        commentCount: commentCount,
+        liked: liked,
+        userDetails: userDetail, // Attach user details to each post
+      };
+    });
+
+    res.status(200).json(postsWithDetails);
+  } catch (error) {
+    console.error('Error fetching posts with details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+
+
 exports.getUserList = async (req, res) => {
   const userId = req.params.id; // Assuming the userId is passed in the headers
 
