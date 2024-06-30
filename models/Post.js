@@ -9,7 +9,7 @@ const Post = sequelize.define('Post', {
     allowNull: false,
   },
   image: {
-    type: DataTypes.STRING,
+    type: DataTypes.JSON,
     allowNull: true, // initially allowNull, update after file save
   },
   location: {
@@ -28,10 +28,7 @@ const Post = sequelize.define('Post', {
     type: DataTypes.INTEGER,
     defaultValue: 0, // Default value for like count
 },
-originalPostId: {
-  type: DataTypes.INTEGER,
-  allowNull: true, // This will be null for original posts, and reference the original post for reposts
-},
+
 });
 
 

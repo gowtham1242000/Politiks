@@ -638,45 +638,54 @@ exports.getFollowingList = async (req, res) => {
 //   }
 // };
   
-//   const saveImage = (file, userId) => {
-//     const userDir = path.join('/etc/ec/data/post', userId.toString());
-//     if (!fs.existsSync(userDir)) {
-//       fs.mkdirSync(userDir, { recursive: true });
-//     }
-  
-//     const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
-//     fs.writeFileSync(filePath, file.data);
-//     return filePath;
-//   };
-  
-  exports.createPost = async (req, res) => {
-    const { tagUser, caption, location } = req.body;
-    const userId = req.params.id;
-    const image = req.files && req.files.image;
-    //const location =location;
+  // Function to save images
+const saveImage = (file, userId) => {
+  const userDir = path.join('/etc/ec/data/post', userId.toString());
+  if (!fs.existsSync(userDir)) {
+    fs.mkdirSync(userDir, { recursive: true });
+  }
 
-  console.log("image---------------",image)
-    try {
-      const post = await Post.create({ userId, location, tagUser, caption });
-console.log("post-----",post)  
-      if (image && image.name && image.data) {
-        const imagePath = saveImage(image, userId);
-  
-        // Construct the URL for the image
-        const imageUrl = `https://politiks.aindriya.co.uk/post/${userId}/${image.name.replace(/\s+/g, '_')}`;
-        post.image = imageUrl;
-        await post.save();
+  const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
+  fs.writeFileSync(filePath, file.data);
+  return filePath;
+};
+
+exports.createPost = async (req, res) => {
+  const { tagUser, caption, location } = req.body;
+  const userId = req.params.id;
+  const images = req.files && req.files.image;
+
+  try {
+    const post = await Post.create({ userId, location, tagUser, caption });
+
+    if (images) {
+      const imageUrls = [];
+
+      if (Array.isArray(images)) {
+        // Handle multiple images
+        images.forEach(image => {
+          const imagePath = saveImage(image, userId);
+          const imageUrl = `https://politiks.aindriya.co.uk/post/${userId}/${path.basename(imagePath)}`;
+          imageUrls.push(imageUrl);
+        });
       } else {
-        console.error('Invalid image file:', image);
+        // Handle single image
+        const imagePath = saveImage(images, userId);
+        const imageUrl = `https://politiks.aindriya.co.uk/post/${userId}/${path.basename(imagePath)}`;
+        imageUrls.push(imageUrl);
       }
-  
-      res.status(201).json({ message: 'Post created successfully', post });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal Server Error' });
-    }
-  };
 
+      // Save image URLs in the Post model
+      post.image = imageUrls;
+      await post.save();
+    }
+
+    res.status(201).json({ message: 'Post created successfully', post });
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
 /*
 exports.getAllPost = async (req, res) => {
   const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
@@ -2398,3 +2407,5 @@ exports.createRepost = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
