@@ -205,31 +205,6 @@ exports.login = async (req, res) => {
     }
 }
 
-// exports.goToHome = async (req, res) => {
-//   const userId = req.params.id; // Correctly access userId from req.params
-
-//   try {
-//       const user = await User.findOne({ where: { id: userId } });
-
-//       if (!user) {
-//           return res.status(404).json({ message: 'User not found' });
-//       }
-
-//       // Assuming you have a method to validate password
-//       // if (!user.validPassword(user.password)) {
-//       //     return res.status(401).json({ message: 'Invalid password' });
-//       // }
-
-//       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-//       user.token = token;
-//       await user.save();
-
-//       res.status(200).json({ message: 'Login successful', token, user });
-//   } catch (error) {
-//       console.error('Error finding user:', error);
-//       res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
 
 exports.goToHome = async (req, res) => {
   const userId = req.params.id;
@@ -388,24 +363,6 @@ exports.deleteUser = async (req, res) => {
     }
 }
 
-// Get user details
-/*
-exports.getUser = async (req, res) => {
-    const userId = req.params.id;
-
-    try {
-        const user = await User.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        res.json({ user });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}
-*/
 exports.getUser = async (req, res) => {
   const userId = req.params.id;
 
@@ -558,87 +515,6 @@ console.log("interestNames----------",interestNames);
     }
 };
 
-//handle followers and following
-
-  //   exports.following = async(req,res) =>{
-  //       console.log("req.body-------",req.body)
-  //   const {followerId } = req.body;
-
-  //   const userId = req.params.id;
-  
-  //   try {
-  //     // Create a new following relationship
-  //     const newFollowing = await Following.create({ userId, followerId });
-  
-  //     res.status(201).json({ message: 'User followed successfully', following: newFollowing });
-  //   } catch (error) {
-  //     console.error(error);
-  //     res.status(500).json({ message: 'Internal Server Error' });
-  //   }
-  // };
-
-/*
-exports.getFollowingList = async (req, res) => {
-  const userId = req.params.id; // Assuming userId is passed in the headers
-
-  try {
-    // Find all entries in Following table where userId matches the provided userId
-    const followingList = await Following.findAll({
-      where: {
-        userId: userId,
-      },
-      attributes: ['followerId'], // Specify the attributes you want to retrieve
-    });
-
-    if (!followingList) {
-      return res.status(404).json({ message: 'No following found for the user' });
-    }
-
-    // Extract followerIds from followingList
-    const followerIds = followingList.map(entry => entry.followerId);
-
-    res.json({ followingList: followerIds });
-  } catch (error) {
-    console.error('Error fetching following list:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-
-// exports.getFollowingList = async (req, res) => {
-//   const userId = req.params.id; // Assuming userId is passed in the headers
-
-//   try {
-//     // Find all entries in Following table where userId matches the provided userId
-//     const followingList = await Following.findAll({
-//       where: {
-//         userId: userId,
-//       },
-//       attributes: ['followerId'], // Specify the attributes you want to retrieve
-//     });
-
-//     if (!followingList) {
-//       return res.status(404).json({ message: 'No following found for the user' });
-//     }
-
-//     // Extract followerIds from followingList
-//     const followerIds = followingList.map(entry => entry.followerId);
-
-//     // Count the number of followers for each user
-//     const followerCount = await Following.count({
-//       where: {
-//         userId: userId,
-//       },
-//     });
-
-//     res.json({ followingList: followerIds, followerCount: followerCount });
-//   } catch (error) {
-//     console.error('Error fetching following list:', error);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-// };
-  
-  // Function to save images
 const saveImage = (file, userId) => {
   const userDir = path.join('/etc/ec/data/post', userId.toString());
   if (!fs.existsSync(userDir)) {
@@ -686,72 +562,7 @@ exports.createPost = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-/*
-exports.getAllPost = async (req, res) => {
-  const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
-  console.log("User ID from request params:", userId);
 
-  try {
-    // Step 1: Fetch all posts in descending order of createdAt
-    const posts = await Post.findAll({
-      order: [['createdAt', 'DESC']],
-    });
-
-    // Step 2: Extract postIds and userIds from posts
-    const postIds = posts.map(post => post.id);
-    const userIds = posts.map(post => post.userId);
-
-    // Step 3: Fetch user details for the extracted userIds
-    const userDetails = await UserDetails.findAll({
-      where: { userId: userIds },
-    });
-
-    // Step 4: Fetch all likes and comments for the posts
-    const postLikes = await PostLike.findAll({
-      where: { postId: postIds },
-    });
-    const postComments = await Comment.findAll({
-      where: { postId: postIds },
-    });
-
-    console.log("Post likes fetched:", postLikes);
-    console.log("Post comments fetched:", postComments);
-
-    // Step 5: Combine posts, user details, like count, comment count, and liked flag into a single response
-    const postsWithDetails = posts.map(post => {
-      const userDetail = userDetails.find(detail => detail.userId === post.userId);
-      const likeCount = postLikes.filter(like => like.postId === post.id).length;
-      const commentCount = postComments.filter(comment => comment.postId === post.id).length;
-      
-      // Debugging
-      console.log(`Post ID: ${post.id}`);
-      console.log(`Likes for Post ID ${post.id}:`, postLikes.filter(like => like.postId === post.id));
-      console.log(`User ID from likes:`, postLikes.filter(like => like.postId === post.id).map(like => like.userId));
-
-      const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
-      console.log(`Liked status for Post ID ${post.id} by User ID ${userId}:`, liked);
-
-      return {
-        id: post.id,
-        userId: post.userId,
-        image: post.image,
-        location: post.location,
-        tagUser: post.tagUser,
-        caption: post.caption,
-        likeCount: likeCount,
-        commentCount: commentCount,
-        liked: liked,
-        userDetails: userDetail, // Attach user details to each post
-      };
-    });
-
-    res.status(200).json(postsWithDetails);
-  } catch (error) {
-    console.error('Error fetching posts with details:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
 
 exports.getAllPost = async (req, res) => {
   const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
@@ -790,17 +601,24 @@ exports.getAllPost = async (req, res) => {
       const userDetail = await UserDetails.findOne({
         where: { userId: originalPost.userId },
       });
+      let imageArray;
+      try {
+        imageArray = JSON.parse(originalPost.image);
+      } catch (error) {
+        imageArray = [originalPost.image]; // If parsing fails, fallback to single image
+      }
       return {
         id: originalPost.id,
         userId: originalPost.userId,
-        image: originalPost.image,
-        location: originalPost.location,
-        tagUser: originalPost.tagUser,
+//        image: imageArray,
+        //location: originalPost.location,
+        //tagUser: originalPost.tagUser,
         caption: originalPost.caption,
         userDetails: userDetail,
+//	userProfile:originalPost.userProfile,
+  //      userName:originalPost.userName,
       };
     }));
-
     // Create a map for quick access to original post details
     const originalPostMap = {};
     originalPostDetails.forEach(detail => {
@@ -815,24 +633,30 @@ exports.getAllPost = async (req, res) => {
       const userDetail = userDetails.find(detail => detail.userId === post.userId);
       const likeCount = postLikes.filter(like => like.postId === post.id).length;
       const commentCount = postComments.filter(comment => comment.postId === post.id).length;
-      
+
       const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
       const originalPostDetail = post.originalPostId ? originalPostMap[post.originalPostId] : null;
 
-      console.log("originalPostDetail---------",originalPostDetail);
+      let imageArray;
+      try {
+        imageArray = JSON.parse(post.image);
+      } catch (error) {
+        imageArray = [post.image]; // If parsing fails, fallback to single image
+      }
 
       return {
         id: post.id,
         userId: post.userId,
-        image: post.image,
+        image: imageArray,
         location: post.location,
         tagUser: post.tagUser,
         caption: post.caption,
         likeCount: likeCount,
         commentCount: commentCount,
         liked: liked,
-        userDetails: userDetail, // Attach user details to each post
+        userDetails: userDetail,	 // Attach user details to each post
         originalPostDetails: originalPostDetail, // Attach original post details if available
+        isRepost: !!post.originalPostId, // Add flag to indicate if the post is a repost
       };
     });
 
@@ -842,8 +666,6 @@ exports.getAllPost = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
 
 exports.getUserList = async (req, res) => {
   const userId = req.params.id; // Assuming the userId is passed in the headers
@@ -870,23 +692,6 @@ exports.getUserList = async (req, res) => {
   }
 };
 
-/*exports.getAllPost = async (req, res) => {
-  try {
-    // Fetch all posts along with user details
-    const posts = await Post.findAll({
-      include: [{
-        model: UserDetails,
-        attributes: ['id', 'userName', 'role', 'dateOfBirth', 'gender', 'country', 'state', 'status', 'action', 'mySelf', 'userBannerProfile', 'userProfile', 'myParty', 'myInterest', 'mailId'], // Specify the attributes you want to retrieve from UserDetails
-      }],
-    });
-
-    console.log("posts--------", posts);
-    res.status(200).json(posts);
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};*/
   //handle updateUserDetails
 
 const userProfileDir = '/etc/ec/data/UserProfile'; // Define the directory to store profile images
@@ -911,159 +716,6 @@ const saveImages = (file, userId, dir) => {
     fs.writeFileSync(filePath, file.data);
     return filePath;
 };
-
-/*exports.updateUserDetails = async (req, res) => {
-    const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
-   // console.log("req.body----------",req.body)
-    const userId = req.params.id;
-console.log("req.body------------------*************________________----------",req.body);
-console.log("userId======================",userId)
-console.log("myInterest-------------",myInterest)
-//return
-    try {
-        const userDetails = await UserDetails.findOne({ where: { userId } });
-console.log("userDetails--------------",userDetails);
-//return
-        if (!userDetails) {
-            return res.status(404).json({ message: 'User details not found' });
-        }
-
-        // Only update the fields that are provided
-        if (userName) userDetails.userName = userName;
-        //if (role) userDetails.role = role;
-        if (dateOfBirth) userDetails.dateOfBirth = dateOfBirth;
-        if (gender) userDetails.gender = gender;
-        if (country) userDetails.country = country;
-        if (state) userDetails.state = state;
-        if (mySelf) userDetails.mySelf = mySelf;
-        if (myParty) userDetails.myParty = myParty;
-        //if (myInterest) userDetails.myInterest =myInterest;
-         //if(myInterest) userDetails.myInterest = myInterest;
-
-        // Update status based on role
-       // userDetails.status = (role === 'Follower') ? true : false;
-
-        // Save profile banner if provided
-        if (req.files && req.files.userBannerProfile) {
-            const userBannerProfile = req.files.userBannerProfile;
-            const userBannerProfilePath = saveImages(userBannerProfile, userId, userBannerDir);
-
-            // Construct the URL for the banner
-            const userBannerProfileUrl = `https://politiks.aindriya.co.uk/UserBanner/${userId}/${userBannerProfile.name.replace(/\s+/g, '_')}`;
-            userDetails.userBannerProfile = userBannerProfileUrl;
-        }
-
-        // Save profile image if provided
-        if (req.files && req.files.userProfile) {
-            const userProfile = req.files.userProfile;
-            const userProfilePath = saveImages(userProfile, userId, userProfileDir);
-
-            // Construct the URL for the profile image
-            const userProfileUrl = `https://politiks.aindriya.co.uk/UserProfile/${userId}/${userProfile.name.replace(/\s+/g, '_')}`;
-            userDetails.userProfile = userProfileUrl;
-        }
-
-        // Update myInterest if provided
-        if (myInterest) {
-          let interestArray = [];
-          try {
-            interestArray = JSON.parse(myInterest);
-          } catch (error) {
-            return res.status(400).json({ message: 'Invalid format for myInterest' });
-          }
-    
-          const validInterests = await Interest.findAll({ where: { id: interestArray } });
-          if (validInterests.length !== interestArray.length) {
-            return res.status(400).json({ message: 'Invalid interest IDs provided' });
-          }
-    
-         // await UserInterest.destroy({ where: { userDetailsId: userDetails.id } }); // Remove old interests
-          //await Promise.all(validInterests.map(interest => {
-          //   return UserInterest.create({
-          //     userDetailsId: userDetails.id,
-          //     interestId: interest.id
-          //   });
-          // }));
-    
-          userDetails.myInterest = interestArray;
-        }
-    
-        await userDetails.save();
-    
-        res.status(200).json({ message: 'User details updated successfully', userDetails });
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal Server Error' });
-      }
-    };
-*/
-
-/*
-exports.updateUserDetails = async (req, res) => {
-console.log("req.body---------------",req.body)
-  const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
-  const userId = req.params.id;
- 
-console.log('myInterest------------------',myInterest);
-  try {
-      const userDetails = await UserDetails.findOne({ where: { userId } });
-      if (!userDetails) {
-          return res.status(404).json({ message: 'User details not found' });
-      }
-
-      // Only update the fields that are provided
-      if (userName) userDetails.userName = userName;
-      if (dateOfBirth) userDetails.dateOfBirth = dateOfBirth;
-      if (gender) userDetails.gender = gender;
-      if (country) userDetails.country = country;
-      if (state) userDetails.state = state;
-      if (mySelf) userDetails.mySelf = mySelf;
-      if (myParty) userDetails.myParty = myParty;
-
-      // Save profile banner if provided
-      if (req.files && req.files.userBannerProfile) {
-          const userBannerProfile = req.files.userBannerProfile;
-          const userBannerProfilePath = saveImages(userBannerProfile, userId, userBannerDir);
-          const userBannerProfileUrl = `https://politiks.aindriya.co.uk/UserBanner/${userId}/${userBannerProfile.name.replace(/\s+/g, '_')}`;
-          userDetails.userBannerProfile = userBannerProfileUrl;
-      }
-
-      // Save profile image if provided
-      if (req.files && req.files.userProfile) {
-          const userProfile = req.files.userProfile;
-          const userProfilePath = saveImages(userProfile, userId, userProfileDir);
-          const userProfileUrl = `https://politiks.aindriya.co.uk/UserProfile/${userId}/${userProfile.name.replace(/\s+/g, '_')}`;
-          userDetails.userProfile = userProfileUrl;
-      }
-
-      // Update myInterest and myInterestField if provided
-      if (myInterest) {
-          let interestArray = [];
-          try {
-              interestArray = JSON.parse(myInterest);
-          } catch (error) {
-              return res.status(400).json({ message: 'Invalid format for myInterest' });
-          }
-
-          const validInterests = await Interest.findAll({ where: { id: interestArray } });
-          if (validInterests.length !== interestArray.length) {
-              return res.status(400).json({ message: 'Invalid interest IDs provided' });
-          }
-
-          const interestNames = validInterests.map(interest => interest.name); // Assuming the Interest model has a 'name' field
-          userDetails.myInterest = interestArray;
-          userDetails.myInterestField = interestNames;
-      }
-
-      await userDetails.save();
-console.log("userDetails--------------",userDetails);
-      res.status(200).json({ message: 'User details updated successfully', userDetails });
-  } catch (error) {
-      console.error("error------------",error);
-      res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-*/
 
 exports.updateUserDetails = async (req, res) => {
   const { userName, dateOfBirth, gender, country, state, mySelf, myParty, myInterest } = req.body;
@@ -1187,120 +839,6 @@ exports.uploadVerificationFiles = async (req, res) => {
     }
 };
 
-/*
-exports.getUserDetails = async (req, res) => {
-  const userId = req.params.id;
-
-  try {
-    // Find user details by userId
-    const userDetails = await UserDetails.findOne({
-      where: { userId:userId },
-  //    attributes: ['userId', 'userName', 'role', 'dateOfBirth', 'gender', 'country', 'state', 'status', 'action', 'mySelf', 'userBannerProfile', 'userProfile', 'myParty', 'myInterest', 'mailId'],
-    });
-
-    if (!userDetails) {
-      return res.status(404).json({ message: 'User details not found' });
-    }
-
-    res.status(200).json( [userDetails] );
-  } catch (error) {
-    console.error('Error fetching user details:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-*/
-
-/*exports.getUserDetails = async (req, res) => {
-  const userId = req.params.id;
-  console.log("userId---------oog id",userId)
-  try {
-    // Find user details by userId
-console.log("userId------------",userId)
-    const userDetails = await UserDetails.findOne({
-      where: { userId: userId },
-  //    attributes: ['userId', 'userName', 'role', 'dateOfBirth', 'gender', 'country', 'state', 'status', 'action', 'mySelf', 'userBannerProfile', 'userProfile', 'myParty', 'myInterest'],
-    });
-
-    if (!userDetails) {
-      return res.status(404).json({ message: 'User details not found' });
-    }
-
-    // Fetch fullname from User table
-    const user = await User.findOne({
-      where: { id: userId },
-      attributes: ['fullName'],
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Merge userDetails and user data
-    const response = {
-      ...userDetails.toJSON(),
-      fullName: user.fullName,
-    };
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Error fetching user details:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-/*
-exports.getUserDetails = async (req, res) => {
-  const userId = req.params.id;
-  console.log("userId---------oog id", userId);
-  
-  try {
-    // Find user details by userId
-    console.log("userId------------", userId);
-    const userDetails = await UserDetails.findOne({
-      where: { userId: userId },
-    });
-
-    if (!userDetails) {
-      return res.status(404).json({ message: 'User details not found' });
-    }
-
-    // Fetch fullname from User table
-    const user = await User.findOne({
-      where: { id: userId },
-      attributes: ['fullName'],
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Fetch myParty details by name
-    const myPartyData = await MyParty.findOne({
-      where: { name: userDetails.myParty },
-      attributes: ['icons','name'] // Add any other fields you need from myParty table
-    });
-
-    if (!myPartyData) {
-      return res.status(404).json({ message: 'myParty details not found' });
-    }
-
-    // Merge userDetails, user, and myParty data
-    const response = {
-      ...userDetails.toJSON(),
-      fullName: user.fullName,
-      myParty: {
-        ...myPartyData.toJSON()
-      }
-    };
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Error fetching user details:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
 
 exports.getUserDetails = async (req, res) => {
   const userId = req.params.id;
@@ -1352,50 +890,6 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
-/*
-exports.getUserAllPostsByUserId = async (req, res) => {
-  const userId = req.params.id; // Assuming userId is passed as a route parameter
-
-  try {
-    // Find all posts for the specified userId
-    const posts = await Post.findAll({
-      where: { userId: userId }
-    });
-
-    if (!posts || posts.length === 0) {
-      return res.status(404).json({ message: 'No posts found for the user' });
-    }
-
-    res.status(200).json(posts);
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-
-/*exports.getUserAllPostsByUserId = async (req, res) => {
-  const userId =req.params.id; // Assuming userId is passed as a route parameter
-
-  try {
-    // Find all posts for the specified userId in descending order
-    const posts = await Post.findAll({
-      where: { userId: userId },
-      order: [['createdAt', 'DESC']] // Adjust the column name if necessary
-    });
-
-    if (!posts || posts.length === 0) {
-      return res.status(404).json({ message: 'No posts found for the user' });
-    }
-
-    res.status(200).json(posts);
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-*/
 
 exports.getUserAllPostsByUserId = async (req, res) => {
 console.log("get request from front end----------------");
@@ -1504,181 +998,9 @@ console.log("comment-----",comment)
   }
 };
 
-/*
-exports.getCommentsByPostId = async (req, res) => {
-  const postId = req.params.id;
-
-  try {
-      const comments = await Comment.findAll({ where: { postId } });
-      res.status(200).json(comments);
-  } catch (error) {
-      console.error('Error fetching comments:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-/*
-exports.getCommentsByPostId = async (req, res) => {
-  const postId = req.params.id;
-
-  try {
-      // Fetch comments by postId
-      const comments = await Comment.findAll({ where: { postId } });
-      
-      // Create an array of userIds from the comments
-      const userIds = comments.map(comment => comment.userId);
-
-      // Fetch user details for those userIds
-      const userDetails = await UserDetails.findAll({ where: { userId: userIds } });
-
-      // Create a map of userId to userDetails
-      const userDetailsMap = userDetails.reduce((acc, userDetail) => {
-        acc[userDetail.userId] = userDetail;
-        return acc;
-      }, {});
-
-      // Attach user details to the comments
-      const commentsWithUserDetails = comments.map(comment => {
-        return {
-          ...comment.toJSON(),
-          userDetails: userDetailsMap[comment.userId] || null
-        };
-      });
-
-      res.status(200).json(commentsWithUserDetails);
-  } catch (error) {
-      console.error('Error fetching comments:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
-};*/
-
 
 exports.getCommentsByPostId = async (req, res) => {
   const postId = req.params.id;
-/*
-  try {
-      // Fetch comments by postId
-      const comments = await Comment.findAll({ where: { postId } });
-
-      // Create an array of commentIds from the comments
-      const commentIds = comments.map(comment => comment.id);
-
-      // Fetch subComments for those commentIds
-      const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
-
-      // Fetch user details for the users who made comments
-      const userIds = comments.map(comment => comment.userId);
-      const userDetails = await UserDetails.findAll({ where: { userId: userIds } });
-
-      // Create a map of userId to userDetails
-      const userDetailsMap = userDetails.reduce((acc, userDetail) => {
-        acc[userDetail.userId] = userDetail;
-        return acc;
-      }, {});
-
-      // Create a map of commentId to subComments
-      const subCommentsMap = subComments.reduce((acc, subComment) => {
-        if (!acc[subComment.commentId]) {
-          acc[subComment.commentId] = [];
-        }
-        acc[subComment.commentId].push(subComment);
-        return acc;
-      }, {});
-
-      // Attach user details and subComments to the comments
-      const commentsWithUserDetailsAndSubComments = comments.map(comment => {
-        return {
-          ...comment.toJSON(),
-          subComments: subCommentsMap[comment.id] || [],
-          userDetails: userDetailsMap[comment.userId] || null,
-        //  subComments: subCommentsMap[comment.id] || []
-        };
-      });
-
-      res.status(200).json(commentsWithUserDetailsAndSubComments);
-  } catch (error) {
-      console.error('Error fetching comments:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }*/
-/*try {
-    // Fetch comments by postId
-    const comments = await Comment.findAll({ where: { postId } });
-
-    // Create an array of commentIds from the comments
-    const commentIds = comments.map(comment => comment.id);
-
-    // Fetch subComments for those commentIds
-    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
-
-    // Fetch user details for the users who made comments and sub-comments
-    const commentUserIds = [...new Set(comments.map(comment => comment.userId))];
-    const subCommentUserIds = [...new Set(subComments.map(subComment => subComment.userId))];
-    const allUserIds = [...new Set([...commentUserIds, ...subCommentUserIds])]; // Get unique userIds
-    const userDetails = await UserDetails.findAll({ where: { userId: allUserIds } });
-
-    // Create a map of userId to userDetails with specific fields
-    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
-      acc[userDetail.userId] = {
-        id: userDetail.id,
-        userId: userDetail.userId,
-        role: userDetail.role,
-        userName: userDetail.userName,
-        userProfile: userDetail.userProfile,
-      };
-      return acc;
-    }, {});
-
-    // Create a map of commentId to subComments
-    const subCommentsMap = subComments.reduce((acc, subComment) => {
-      if (!acc[subComment.commentId]) {
-        acc[subComment.commentId] = [];
-      }
-      const userDetail = userDetailsMap[subComment.userId] || {};
-      acc[subComment.commentId].push({
-        id: subComment.id,
-        userId: subComment.userId,
-        commentId: subComment.commentId,
-        subComment: subComment.subComment,
-        userDetails: {
-          ...userDetail,
-          commentedAt: new Date(subComment.createdAt).toLocaleTimeString()
-        }
-      });
-      return acc;
-    }, {});
-
-    // Attach user details and subComments to the comments
-    const commentsWithUserDetailsAndSubComments = comments.map(comment => {
-      const userDetail = userDetailsMap[comment.userId] || {};
-      return {
-        id: comment.id,
-        userId: comment.userId,
-        postId: comment.postId,
-        content: comment.content,
-        userDetails: {
-          ...userDetail,
-          commentedAt: new Date(comment.createdAt).toLocaleTimeString()
-        },
-        subComments: subCommentsMap[comment.id] || []
-      };
-    });
-
-    // Calculate counts
-    const commentCount = comments.length;
-    const subCommentCount = subComments.length;
-
-    // Add counts to the response
-    const response = {
-      commentCount,
-      subCommentCount,
-      comments: commentsWithUserDetailsAndSubComments
-    };
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }*/
 try {
   // Fetch comments by postId
   const comments = await Comment.findAll({ where: { postId } });
@@ -1799,34 +1121,6 @@ try {
     }
   };
 
-/*
-exports.likeComment = async (req, res) => {
-  const commentId = req.params.commentId;
-  const { userId } = req.body;
-
-  try {
-    // Check if the user has already liked this comment
-    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
-
-    if (existingLike) {
-      return res.status(400).json({ message: 'User has already liked this comment' });
-    }
-
-    // Create a new like entry
-    await CommentLike.create({ commentId, userId });
-
-    // Increment the like count
-    const comment = await Comment.findByPk(commentId);
-    comment.likeCount += 1;
-    await comment.save();
-
-    res.status(200).json({ message: 'Comment liked successfully' });
-  } catch (error) {
-    console.error('Error liking comment:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
 
 exports.likeComment = async (req, res) => {
   const commentId = req.params.commentId;
@@ -1855,34 +1149,6 @@ exports.likeComment = async (req, res) => {
   }
 };
 
-/*
-exports.unlikeComment = async (req, res) => {
-  const commentId = req.params.commentId;
-  const { userId } = req.body;
-
-  try {
-    // Check if the like entry exists
-    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
-
-    if (!existingLike) {
-      return res.status(400).json({ message: 'User has not liked this comment' });
-    }
-
-    // Remove the like entry
-    await CommentLike.destroy({ where: { commentId, userId } });
-
-    // Decrement the like count
-    const comment = await Comment.findByPk(commentId);
-    comment.likeCount -= 1;
-    await comment.save();
-
-    res.status(200).json({ message: 'Comment unliked successfully' });
-  } catch (error) {
-    console.error('Error unliking comment:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
 exports.unlikeComment = async (req, res) => {
   const commentId = req.params.commentId;
   const { userId } = req.body;
@@ -1911,30 +1177,6 @@ exports.unlikeComment = async (req, res) => {
 };
 
 exports.likeSubComment = async (req, res) => {
-/*  const  subCommentId = req.params.commentId;
-  const { userId } = req.body;
-
-  try {
-    // Check if the user has already liked this sub-comment
-    const existingLike = await SubCommentLike.findOne({ where: { subCommentId, userId } });
-
-    if (existingLike) {
-      return res.status(400).json({ message: 'User has already liked this sub-comment' });
-    }
-
-    // Create a new like entry
-    await SubCommentLike.create({ subCommentId, userId });
-
-    // Increment the like count
-    const subComment = await SubComment.findByPk(subCommentId);
-    subComment.likeCount += 1;
-    await subComment.save();
-
-    res.status(200).json({ message: 'Sub-comment liked successfully' });
-  } catch (error) {
-    console.error('Error liking sub-comment:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }*/
   const  subCommentId = req.params.commentId;
   const { userId } = req.body;
 
@@ -2061,22 +1303,6 @@ exports.unfollowUser = async (req, res) => {
 };
 
 
-/*exports.getFollowers = async (req, res) => {
-  const userId = req.params.userId;
-console.log("userId----------------getFollower",userId);
-  try {
-    const followers = await Follow.findAll({ where: { followingId: userId } });
-
-    const followerIds = followers.map(follow => follow.followerId);
-    const followerDetails = await UserDetails.findAll({ where: { userId: followerIds } });
-
-    res.status(200).json(followerDetails);
-  } catch (error) {
-    console.error('Error fetching followers:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};*/
-
 exports.getFollowers = async (req, res) => {
   const userId = req.params.userId;
   console.log("userId----------------getFollower", userId);
@@ -2106,55 +1332,6 @@ exports.getFollowers = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
-
-/*
-exports.getFollowing = async (req, res) => {
-  const userId = req.params.userId;
-
-  try {
-    const followings = await Follow.findAll({ where: { followerId: userId } });
-
-    const followingIds = followings.map(follow => follow.followingId);
-    const followingDetails = await UserDetails.findAll({ where: { userId: followingIds } });
-
-    res.status(200).json(followingDetails);
-  } catch (error) {
-    console.error('Error fetching following:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-
-/*
-exports.getFollowing = async (req, res) => {
-  const userId = req.params.userId;
-
-  try {
-    // Fetch all followings
-    const followings = await Follow.findAll({ where: { followerId: userId } });
-
-    // Map to extract following IDs
-    const followingIds = followings.map(follow => follow.followingId);
-
-    // Fetch details of all users being followed
-    const followingDetails = await UserDetails.findAll({ where: { userId: followingIds } });
-
-    // Get the count of followings
-    const followingCount = followingDetails.length;
-
-    res.status(200).json({
-      count: followingCount,
-      followings: followingDetails
-    });
-  } catch (error) {
-    console.error('Error fetching following:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-
 
 exports.getFollowing = async (req, res) => {
   const userId = req.params.userId;
@@ -2189,53 +1366,6 @@ exports.getFollowing = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
-/*
-exports.suggestions = async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    // Fetch the user by userId to get the location
-    const user = await User.findByPk(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const location = user.location;
-
-    // Fetch newly joined users
-    const newUsers = await User.findAll({
-      order: [['createdAt', 'DESC']],
-      limit: 10
-    });
-
-    // Fetch location-based users
-    let locationUsers = [];
-    if (location) {
-      locationUsers = await User.findAll({
-        where: { location },
-        order: [['createdAt', 'DESC']],
-        limit: 10
-      });
-    }
-
-    // Combine both results
-    const suggestions = {
-      newUsers,
-      locationUsers
-    };
-
-    res.status(200).json(suggestions);
-  } catch (error) {
-    console.error('Error fetching suggestions:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
-
-
 
 
 exports.suggestions = async (req, res) => {
@@ -2380,6 +1510,7 @@ exports.likedUserList = async(req,res)=>{
 }
 }
 
+
 exports.createRepost = async (req, res) => {
   const postId = req.params.postId;
   const { userId, caption, tagUser, location } = req.body;
@@ -2391,10 +1522,21 @@ exports.createRepost = async (req, res) => {
       return res.status(404).json({ message: 'Original post not found' });
     }
 
+    // Ensure image URLs are properly formatted and parsed as an array
+    let imageUrls;
+    try {
+      imageUrls = JSON.parse(originalPost.image);
+      if (!Array.isArray(imageUrls)) {
+        imageUrls = [imageUrls];
+      }
+    } catch (error) {
+      imageUrls = [originalPost.image.replace(/^"|"$/g, '')];
+    }
+
     // Create a new post with the new details or fallback to original post details
     const newPost = await Post.create({
       userId,
-      image: originalPost.image,
+      image: imageUrls, // Store image as an array
       location: location || originalPost.location,
       tagUser: tagUser || originalPost.tagUser,
       caption: caption || originalPost.caption,
@@ -2407,5 +1549,3 @@ exports.createRepost = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
