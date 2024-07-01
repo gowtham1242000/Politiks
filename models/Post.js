@@ -27,6 +27,9 @@ const Post = sequelize.define('Post', {
   likeCount: {
     type: DataTypes.INTEGER,
     defaultValue: 0, // Default value for like count
+},originalPostId: {
+  type: DataTypes.INTEGER,
+  allowNull: true, // This will be null for original posts, and reference the original post for reposts
 },
 
 });
