@@ -563,7 +563,7 @@ exports.createPost = async (req, res) => {
   }
 };
 
-
+/*
 exports.getAllPost = async (req, res) => {
   const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
   console.log("User ID from request params:", userId);
@@ -666,6 +666,247 @@ exports.getAllPost = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+/*
+exports.getAllPost = async (req, res) => {
+  const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
+  console.log("User ID from request params:", userId);
+
+  try {
+    // Step 1: Fetch all posts in descending order of createdAt
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Step 2: Extract postIds and userIds from posts
+    const postIds = posts.map(post => post.id);
+    const userIds = posts.map(post => post.userId);
+    const originalPostIds = posts.map(post => post.originalPostId).filter(id => id !== null);
+
+    // Step 3: Fetch user details for the extracted userIds
+    const userDetails = await UserDetails.findAll({
+      where: { userId: userIds },
+    });
+
+    // Step 4: Fetch all likes and comments for the posts
+    const postLikes = await PostLike.findAll({
+      where: { postId: postIds },
+    });
+    const postComments = await Comment.findAll({
+      where: { postId: postIds },
+    });
+
+    // Step 5: Fetch original posts if they exist
+    const originalPosts = await Post.findAll({
+      where: { id: originalPostIds },
+    });
+
+    const originalPostDetails = await Promise.all(originalPosts.map(async originalPost => {
+      const userDetail = await UserDetails.findOne({
+        where: { userId: originalPost.userId },
+      });
+      let imageArray;
+      try {
+        imageArray = JSON.parse(originalPost.image);
+      } catch (error) {
+        imageArray = [originalPost.image]; // If parsing fails, fallback to single image
+      }
+      return {
+        id: originalPost.id,
+        userId: originalPost.userId,
+        image: imageArray,
+        location: originalPost.location,
+        tagUser: originalPost.tagUser,
+        caption: originalPost.caption,
+        userDetails: userDetail,
+      };
+    }));
+
+    // Create a map for quick access to original post details
+    const originalPostMap = {};
+    originalPostDetails.forEach(detail => {
+      originalPostMap[detail.id] = detail;
+    });
+
+    console.log("Post likes fetched:", postLikes);
+    console.log("Post comments fetched:", postComments);
+
+    // Step 6: Combine posts, user details, like count, comment count, liked flag, and original post details into a single response
+    const postsWithDetails = posts.map(post => {
+      const userDetail = userDetails.find(detail => detail.userId === post.userId);
+      const likeCount = postLikes.filter(like => like.postId === post.id).length;
+      const commentCount = postComments.filter(comment => comment.postId === post.id).length;
+
+      const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
+      const originalPostDetail = post.originalPostId ? originalPostMap[post.originalPostId] : null;
+
+      let imageArray;
+      try {
+        imageArray = JSON.parse(post.image);
+      } catch (error) {
+        imageArray = [post.image]; // If parsing fails, fallback to single image
+      }
+
+      const postDetails = {
+        id: post.id,
+        userId: post.userId,
+        image: imageArray,
+        location: post.location,
+        tagUser: post.tagUser,
+        caption: post.caption,
+        likeCount: likeCount,
+        commentCount: commentCount,
+        liked: liked,
+        userDetails: userDetail, // Attach user details to each post
+      };
+
+      if (originalPostDetail) {
+        postDetails.isRepost = true;
+        postDetails.repostDetails = originalPostDetail; // Attach original post details if available
+      }
+
+      return postDetails;
+    });
+
+    res.status(200).json(postsWithDetails);
+  } catch (error) {
+    console.error('Error fetching posts with details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+exports.getAllPost = async (req, res) => {
+  const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
+  console.log("User ID from request params:", userId);
+
+  try {
+    // Step 1: Fetch all posts in descending order of createdAt
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Step 2: Extract postIds and userIds from posts
+    const postIds = posts.map(post => post.id);
+    const userIds = posts.map(post => post.userId);
+    const originalPostIds = posts.map(post => post.originalPostId).filter(id => id !== null);
+
+    // Step 3: Fetch user details for the extracted userIds
+    const userDetails = await UserDetails.findAll({
+      where: { userId: userIds },
+    });
+
+    // Step 4: Fetch all likes and comments for the posts
+    const postLikes = await PostLike.findAll({
+      where: { postId: postIds },
+    });
+    const postComments = await Comment.findAll({
+      where: { postId: postIds },
+    });
+
+    // Step 5: Fetch original posts if they exist
+    const originalPosts = await Post.findAll({
+      where: { id: originalPostIds },
+    });
+
+    const originalPostDetails = await Promise.all(originalPosts.map(async originalPost => {
+      const userDetail = await UserDetails.findOne({
+        where: { userId: originalPost.userId },
+      });
+      let imageArray;
+      try {
+        imageArray = JSON.parse(originalPost.image);
+      } catch (error) {
+        imageArray = [originalPost.image]; // If parsing fails, fallback to single image
+      }
+      return {
+        id: originalPost.id,
+        userId: originalPost.userId,
+        image: imageArray,
+        location: originalPost.location,
+        tagUser: originalPost.tagUser,
+        caption: originalPost.caption,
+        userDetails:  {
+          id: userDetail.userId,
+          userName: userDetail.userName,
+          email: userDetail.email,
+          userProfile: userDetail.userProfile,
+          location: userDetail.state,
+          createdAt: userDetail.createdAt,
+          updatedAt: userDetail.updatedAt,
+        },  // Include only updatedAt field
+      };
+    }));
+
+    // Create a map for quick access to original post details
+    const originalPostMap = {};
+    originalPostDetails.forEach(detail => {
+      originalPostMap[detail.id] = detail;
+    });
+
+    console.log("Post likes fetched:", postLikes);
+    console.log("Post comments fetched:", postComments);
+
+    // Step 6: Combine posts, user details, like count, comment count, liked flag, and original post details into a single response
+    const postsWithDetails = posts.map(post => {
+      const userDetail = userDetails.find(detail => detail.userId === post.userId);
+      const likeCount = postLikes.filter(like => like.postId === post.id).length;
+      const commentCount = postComments.filter(comment => comment.postId === post.id).length;
+
+      const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
+      const originalPostDetail = post.originalPostId ? originalPostMap[post.originalPostId] : null;
+
+      let imageArray;
+      try {
+        imageArray = JSON.parse(post.image);
+      } catch (error) {
+        imageArray = [post.image]; // If parsing fails, fallback to single image
+      }
+
+      const formattedPost = {
+        id: post.id,
+        userId: post.userId,
+        image: imageArray, // Use 'images' instead of 'image' for consistency
+        location: post.location,
+        tagUser: post.tagUser,
+        caption: post.caption,
+        likeCount: likeCount,
+        commentCount: commentCount,
+        liked: liked,
+        userDetails: userDetail ? {
+          id: userDetail.userId,
+          userName: userDetail.userName,
+          email: userDetail.email,
+          userProfile: userDetail.userProfile,
+          location: userDetail.state,
+          createdAt: userDetail.createdAt,
+          updatedAt: userDetail.updatedAt,
+        } : null,
+      };
+
+      if (originalPostDetail) {
+        formattedPost.isRepost = true;
+        formattedPost.repostDetails = {
+          id: originalPostDetail.id,
+          userId: originalPostDetail.userId,
+          image: originalPostDetail.image,
+          location: originalPostDetail.location,
+          tagUser: originalPostDetail.tagUser,
+          caption: originalPostDetail.caption,
+          userDetails: originalPostDetail.userDetails, // Ensure userDetails is included
+        };
+      }
+
+      return formattedPost;
+    });
+
+    res.status(200).json(postsWithDetails);
+  } catch (error) {
+    console.error('Error fetching posts with details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 
 exports.getUserList = async (req, res) => {
   const userId = req.params.id; // Assuming the userId is passed in the headers
@@ -979,9 +1220,11 @@ console.log("comment-----",comment)
     if (!comment) {
       return res.status(404).json({ message: 'Comment not found' });
     }
+console.log("comment.userId-------------------------",comment.userId);
+console.log("userId-------------------",userId);
 
     // Check if the userId matches the userId of the comment
-    if (comment.userId !== userId) {
+    if (comment.userId != userId) {
       return res.status(403).json({ message: 'You are not authorized to update this comment' });
     }
 
@@ -990,7 +1233,7 @@ console.log("comment-----",comment)
     }
 
     await comment.save();
-
+console.log("-------------comment-------------",comment)
     res.status(200).json({ message: 'Comment updated successfully', comment });
   } catch (error) {
     console.error('Error updating comment:', error);
@@ -998,7 +1241,168 @@ console.log("comment-----",comment)
   }
 };
 
+/*
+exports.deleteComment =async (req,res)=>{
+const commentId = req.params.commentId;
+console.log("commentId-----------one-------",commentId)
+console.log("req.body-----------------one------",req.body);
+const userId = req.body.userId;
+console.log("userId------------one----",userId)
+try {
+    // Find the comment by ID
+    const comment = await Comment.findByPk(commentId);
+//console.log("comment---------------",comment);
+    // Check if the comment exists
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
 
+    // Check if the userId matches the userId of the comment (authorization check)
+    if (comment.userId != userId) {
+      return res.status(403).json({ message: 'You are not authorized to delete this comment' });
+    }
+
+    // Delete the comment
+    await comment.destroy();
+
+    res.status(200).json({ message: 'Comment deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+}
+*/
+
+/*
+exports.deleteComment = async (req, res) => {
+  const commentId = req.params.commentId;
+  const userId = req.body.userId;
+
+  try {
+    // Find the comment by ID
+    const comment = await Comment.findByPk(commentId);
+
+    // Check if the comment exists
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    // Check if the userId matches the userId of the comment (authorization check)
+    if (comment.userId !== userId) {
+      return res.status(403).json({ message: 'You are not authorized to delete this comment' });
+    }
+
+    // Find and delete all likes associated with the comment
+    await CommentLike.destroy({ where: { commentId: commentId } });
+
+    // Delete the comment
+    await comment.destroy();
+
+    res.status(200).json({ message: 'Comment and associated likes deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+
+exports.deleteComment = async (req, res) => {
+  const { commentId, userId } = req.params;
+
+  try {
+    // Find the comment by ID
+    const comment = await Comment.findByPk(commentId);
+
+    // Check if the comment exists
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    // Check if the userId matches the userId of the comment (authorization check)
+    if (comment.userId !== parseInt(userId, 10)) {
+      return res.status(403).json({ message: 'You are not authorized to delete this comment' });
+    }
+
+    // Find and delete all likes associated with the comment
+    await CommentLike.destroy({ where: { commentId: commentId } });
+
+    // Delete the comment
+    await comment.destroy();
+
+    res.status(200).json({ message: 'Comment and associated likes deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.deleteSubComment = async (req, res) => {
+  const { subCommentId, userId } = req.params;
+
+  try {
+    const subComment = await SubComment.findByPk(subCommentId);
+
+    // Check if the sub-comment exists
+    if (!subComment) {
+      return res.status(404).json({ message: 'Sub-comment not found' });
+    }
+
+    // Check if the userId matches the userId of the sub-comment (authorization check)
+    if (subComment.userId !== parseInt(userId, 10)) {
+      return res.status(403).json({ message: 'You are not authorized to delete this sub-comment' });
+    }
+
+    // Find and delete all likes associated with the sub-comment
+    await SubCommentLike.destroy({ where: { subCommentId: subCommentId } });
+
+    // Delete the sub-comment
+    await subComment.destroy();
+
+    res.status(200).json({ message: 'Sub-comment and associated likes deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+// controllers/subCommentController.js
+
+exports.updateSubComment = async (req, res) => {
+  const subCommentId = req.params.subCommentId;
+  const { content, userId } = req.body; // Assuming content is passed in the request body
+
+  try {
+    const subComment = await SubComment.findOne({where:{id:subCommentId}});
+
+    // Check if the sub-comment exists
+    if (!subComment) {
+      return res.status(404).json({ message: 'Sub-comment not found' });
+    }
+
+    // Check if the userId matches the userId of the sub-comment (authorization check)
+    if (subComment.userId !== parseInt(userId, 10)) {
+      return res.status(403).json({ message: 'You are not authorized to update this sub-comment' });
+    }
+
+    if (content) {
+      subComment.subComment = content;
+    }
+
+    await subComment.save();
+
+    res.status(200).json({ message: 'Sub-comment updated successfully', subComment });
+  } catch (error) {
+    console.error('Error updating sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+
+
+/*
 exports.getCommentsByPostId = async (req, res) => {
   const postId = req.params.id;
 try {
@@ -1106,7 +1510,115 @@ try {
 }
 
 };
+*/
+exports.getCommentsByPostId = async (req, res) => {
+  const postId = req.params.id;
+  const userId = req.body.userId; // Assuming userId is passed in the request body
 
+  try {
+    // Fetch comments by postId
+    const comments = await Comment.findAll({ where: { postId } });
+
+    // Fetch subComments for those commentIds
+    const commentIds = comments.map(comment => comment.id);
+    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
+
+    // Extract unique userIds from comments and subComments
+    const commentUserIds = [...new Set(comments.map(comment => comment.userId))];
+    const subCommentUserIds = [...new Set(subComments.map(subComment => subComment.userId))];
+    const allUserIds = [...new Set([...commentUserIds, ...subCommentUserIds])]; // Get unique userIds
+
+    // Fetch user details for allUserIds
+    const userDetails = await UserDetails.findAll({ where: { userId: allUserIds } });
+
+    // Create a map of userId to userDetails with specific fields
+    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
+      acc[userDetail.userId] = {
+        id: userDetail.id,
+        userId: userDetail.userId,
+        role: userDetail.role,
+        userName: userDetail.userName,
+        userProfile: userDetail.userProfile,
+      };
+      return acc;
+    }, {});
+
+    // Fetch likes for comments by commentUserIds
+    const commentLikes = await CommentLike.findAll({ where: { userId: commentUserIds, commentId: commentIds } });
+    const commentLikesMap = commentLikes.reduce((acc, like) => {
+      if (!acc[like.commentId]) {
+        acc[like.commentId] = {};
+      }
+      acc[like.commentId][like.userId] = true; // Set liked to true for comments liked by the user
+      return acc;
+    }, {});
+
+    // Fetch likes for sub-comments by subCommentUserIds
+    const subCommentLikes = await SubCommentLike.findAll({ where: { userId: subCommentUserIds, subCommentId: subComments.map(sc => sc.id) } });
+    const subCommentLikesMap = subCommentLikes.reduce((acc, like) => {
+      if (!acc[like.subCommentId]) {
+        acc[like.subCommentId] = {};
+      }
+      acc[like.subCommentId][like.userId] = true; // Set liked to true for sub-comments liked by the user
+      return acc;
+    }, {});
+
+    // Create a map of commentId to subComments
+    const subCommentsMap = subComments.reduce((acc, subComment) => {
+      if (!acc[subComment.commentId]) {
+        acc[subComment.commentId] = [];
+      }
+      const userDetail = userDetailsMap[subComment.userId] || {};
+      acc[subComment.commentId].push({
+        id: subComment.id,
+        userId: subComment.userId,
+        commentId: subComment.commentId,
+        subComment: subComment.subComment,
+        userDetails: {
+          ...userDetail,
+          commentedAt: new Date(subComment.createdAt).toLocaleTimeString()
+        },
+        liked: subCommentLikesMap[subComment.id] ? subCommentLikesMap[subComment.id][subComment.userId] || false : false, // Set liked flag based on subCommentLikesMap for the specific user
+        userSubCommented: subComment.userId === userId // Flag indicating if current user has sub-commented
+      });
+      return acc;
+    }, {});
+
+    // Attach user details and subComments to the comments
+    const commentsWithUserDetailsAndSubComments = comments.map(comment => {
+      const userDetail = userDetailsMap[comment.userId] || {};
+      return {
+        id: comment.id,
+        userId: comment.userId,
+        postId: comment.postId,
+        content: comment.content,
+        userDetails: {
+          ...userDetail,
+          commentedAt: new Date(comment.createdAt).toLocaleTimeString()
+        },
+        subComments: subCommentsMap[comment.id] || [],
+        liked: commentLikesMap[comment.id] ? commentLikesMap[comment.id][comment.userId] || false : false, // Set liked flag based on commentLikesMap for the specific user
+        userCommented: comment.userId === userId, // Flag indicating if current user has commented
+      };
+    });
+
+    // Calculate counts
+    const commentCount = comments.length;
+    const subCommentCount = subComments.length;
+
+    // Construct final response
+    const response = {
+      commentCount,
+      subCommentCount,
+      comments: commentsWithUserDetailsAndSubComments
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
   exports.createSubComment = async (req, res) => {
     const { userId, commentId, subComment } = req.body;
@@ -1367,7 +1879,7 @@ exports.getFollowing = async (req, res) => {
   }
 };
 
-
+/*
 exports.suggestions = async (req, res) => {
   const { userId } = req.params;
 
@@ -1417,6 +1929,164 @@ exports.suggestions = async (req, res) => {
     const suggestions = {
       newUsers,
       locationUsers
+    };
+
+    res.status(200).json(suggestions);
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+/*
+exports.suggestions = async (req, res) => {
+  const { userId } = req.params;
+
+  console.log("userId----------", userId);
+
+  try {
+    // Fetch the user details by userId to get the state
+    const userDetails = await UserDetails.findOne({
+      where: { userId },
+      attributes: ['state']
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    const location = userDetails.state;
+    console.log("location-------", location);
+
+    // Fetch newly joined users
+    const newUsers = await User.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    // Fetch location-based users
+    let locationUsers = [];
+    if (location) {
+      // Fetch user IDs based on the state
+      const locationUserDetails = await UserDetails.findAll({
+        where: { state: location },
+        attributes: ['userId']
+      });
+
+      const locationUserIds = locationUserDetails.map(detail => detail.userId);
+
+      locationUsers = await User.findAll({
+        where: {
+          id: locationUserIds
+        },
+        order: [['createdAt', 'DESC']],
+        limit: 10
+      });
+    }
+
+    // Fetch user details for newUsers and locationUsers
+    const userIds = [...newUsers.map(user => user.id), ...locationUsers.map(user => user.id)];
+    const userDetailMap = await UserDetails.findAll({
+      where: { userId: userIds }
+    }).then(userDetails => {
+      return userDetails.reduce((map, detail) => {
+        map[detail.userId] = detail;
+        return map;
+      }, {});
+    });
+
+    // Attach user details to newUsers and locationUsers
+    const newUsersWithDetails = newUsers.map(user => {
+      return {
+        ...user.toJSON(),
+        userDetails: userDetailMap[user.id]
+      };
+    });
+
+    const locationUsersWithDetails = locationUsers.map(user => {
+      return {
+        ...user.toJSON(),
+        userDetails: userDetailMap[user.id]
+      };
+    });
+
+    res.status(200).json({
+      newUsers: newUsersWithDetails,
+      locationUsers: locationUsersWithDetails
+    });
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};*/
+exports.suggestions = async (req, res) => {
+  const { userId } = req.params;
+
+  console.log("userId----------", userId);
+
+  try {
+    // Fetch the user details by userId to get the state
+    const userDetails = await UserDetails.findOne({
+      where: { userId },
+      attributes: ['state']
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    const location = userDetails.state;
+    console.log("location-------", location);
+
+    // Fetch newly joined users
+    const newUsers = await User.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    // Fetch location-based users
+    let locationUsers = [];
+    if (location) {
+      // Fetch user IDs based on the state
+      const locationUserDetails = await UserDetails.findAll({
+        where: { state: location },
+        attributes: ['userId']
+      });
+
+      const locationUserIds = locationUserDetails.map(detail => detail.userId);
+
+      locationUsers = await User.findAll({
+        where: {
+          id: locationUserIds
+        },
+        order: [['createdAt', 'DESC']],
+        limit: 10
+      });
+    }
+
+    // Fetch follower counts and user details for new users and location-based users
+    const fetchUserDetailsAndFollowerCount = async (users) => {
+      const usersWithDetails = await Promise.all(users.map(async user => {
+        const followerCount = await Follow.count({ where: { followingId: user.id } });
+        const userDetails = await UserDetails.findOne({
+          where: { userId: user.id }
+        });
+        return {
+          ...user.toJSON(),
+          followerCount,
+          userDetails
+        };
+      }));
+      return usersWithDetails;
+    };
+
+    const newUsersWithDetails = await fetchUserDetailsAndFollowerCount(newUsers);
+    const locationUsersWithDetails = await fetchUserDetailsAndFollowerCount(locationUsers);
+
+    // Combine both results
+    const suggestions = {
+      newUsers: newUsersWithDetails,
+      locationUsers: locationUsersWithDetails
     };
 
     res.status(200).json(suggestions);

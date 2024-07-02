@@ -55,7 +55,7 @@ router.get('/getCommentsByPostId/:id', userController.getCommentsByPostId);
 router.post('/createSubComment', userController.createSubComment);
 
 router.put('/updateComment/:commentId', userController.updateComment);
-
+router.delete('/deleteComment/:commentId/:userId', userController.deleteComment);
 
 //handel like comment
 
@@ -64,6 +64,9 @@ router.post('/unlikeComment/:commentId', userController.unlikeComment);
 
 router.post('/likeSubComment/:commentId', userController.likeSubComment);
 router.post('/unlikeSubComment/:commentId', userController.unlikeSubComment);
+
+router.put('/updateSubComment/:subCommentId', userController.updateSubComment);
+router.delete('/deleteSubComment/:subCommentId/:userId', userController.deleteSubComment);
 
 //Follow
 
