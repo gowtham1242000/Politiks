@@ -1585,6 +1585,7 @@ exports.getCommentsByPostId = async (req, res) => {
           commentedAt: new Date(subComment.createdAt).toLocaleTimeString()
         },
         liked: subCommentLikesMap[subComment.id] ? subCommentLikesMap[subComment.id][userId] || false : false, // Set liked flag based on subCommentLikesMap for the specific user
+        likeCount: subCommentLikes.filter(like => like.subCommentId === subComment.id).length, // Count of likes for the sub-comment
         userSubCommented: subComment.userId === userId // Flag indicating if current user has sub-commented
       });
       return acc;
