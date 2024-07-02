@@ -1512,16 +1512,22 @@ try {
 };
 */
 exports.getCommentsByPostId = async (req, res) => {
-  const postId = req.params.id;
-  const userId = req.body.userId; // Assuming userId is passed in the request body
+  const postId = req.params.postId;
+  const userId = req.params.userId; // Assuming userId is passed in the request params
 
   try {
-    // Fetch comments by postId
-    const comments = await Comment.findAll({ where: { postId } });
+    // Fetch comments by postId in descending order
+    const comments = await Comment.findAll({
+      where: { postId },
+      order: [['createdAt', 'DESC']]
+    });
 
-    // Fetch subComments for those commentIds
+    // Fetch subComments for those commentIds in descending order
     const commentIds = comments.map(comment => comment.id);
-    const subComments = await SubComment.findAll({ where: { commentId: commentIds } });
+    const subComments = await SubComment.findAll({
+      where: { commentId: commentIds },
+      order: [['createdAt', 'DESC']]
+    });
 
     // Extract unique userIds from comments and subComments
     const commentUserIds = [...new Set(comments.map(comment => comment.userId))];
@@ -1543,8 +1549,8 @@ exports.getCommentsByPostId = async (req, res) => {
       return acc;
     }, {});
 
-    // Fetch likes for comments by commentUserIds
-    const commentLikes = await CommentLike.findAll({ where: { userId: commentUserIds, commentId: commentIds } });
+    // Fetch likes for comments
+    const commentLikes = await CommentLike.findAll({ where: { commentId: commentIds } });
     const commentLikesMap = commentLikes.reduce((acc, like) => {
       if (!acc[like.commentId]) {
         acc[like.commentId] = {};
@@ -1553,8 +1559,8 @@ exports.getCommentsByPostId = async (req, res) => {
       return acc;
     }, {});
 
-    // Fetch likes for sub-comments by subCommentUserIds
-    const subCommentLikes = await SubCommentLike.findAll({ where: { userId: subCommentUserIds, subCommentId: subComments.map(sc => sc.id) } });
+    // Fetch likes for sub-comments
+    const subCommentLikes = await SubCommentLike.findAll({ where: { subCommentId: subComments.map(sc => sc.id) } });
     const subCommentLikesMap = subCommentLikes.reduce((acc, like) => {
       if (!acc[like.subCommentId]) {
         acc[like.subCommentId] = {};
@@ -1578,7 +1584,7 @@ exports.getCommentsByPostId = async (req, res) => {
           ...userDetail,
           commentedAt: new Date(subComment.createdAt).toLocaleTimeString()
         },
-        liked: subCommentLikesMap[subComment.id] ? subCommentLikesMap[subComment.id][subComment.userId] || false : false, // Set liked flag based on subCommentLikesMap for the specific user
+        liked: subCommentLikesMap[subComment.id] ? subCommentLikesMap[subComment.id][userId] || false : false, // Set liked flag based on subCommentLikesMap for the specific user
         userSubCommented: subComment.userId === userId // Flag indicating if current user has sub-commented
       });
       return acc;
@@ -1597,7 +1603,8 @@ exports.getCommentsByPostId = async (req, res) => {
           commentedAt: new Date(comment.createdAt).toLocaleTimeString()
         },
         subComments: subCommentsMap[comment.id] || [],
-        liked: commentLikesMap[comment.id] ? commentLikesMap[comment.id][comment.userId] || false : false, // Set liked flag based on commentLikesMap for the specific user
+        liked: commentLikesMap[comment.id] ? commentLikesMap[comment.id][userId] || false : false, // Set liked flag based on commentLikesMap for the specific user
+        likeCount: commentLikes.filter(like => like.commentId === comment.id).length, // Count of likes for the comment
         userCommented: comment.userId === userId, // Flag indicating if current user has commented
       };
     });
@@ -1619,6 +1626,7 @@ exports.getCommentsByPostId = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
   exports.createSubComment = async (req, res) => {
     const { userId, commentId, subComment } = req.body;

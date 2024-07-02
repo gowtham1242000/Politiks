@@ -50,7 +50,7 @@ router.get('/getAllMyParties', userController.getAllMyParties);
 //comments
 
 router.post('/createComment', userController.createComment);
-router.get('/getCommentsByPostId/:id', userController.getCommentsByPostId);
+router.get('/getCommentsByPostId/:postId/:userId', userController.getCommentsByPostId);
 
 router.post('/createSubComment', userController.createSubComment);
 
