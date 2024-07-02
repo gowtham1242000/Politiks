@@ -87,6 +87,9 @@ router.get('/likedUserList/:postId', userController.likedUserList);
 
 router.post('/createRepost/:postId', userController.createRepost);
 
+//Reels
+router.post('/createReel/:userId', userController.createReel);
+
 module.exports = router;
 
 

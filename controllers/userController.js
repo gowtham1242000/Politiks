@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const Post = require('../models/Post');
 const PostLike = require('../models/PostLike');
+const Reel = require('../models/Reel');
 
 const Country = require('../models/Country');
 const State = require('../models/State');
@@ -2226,5 +2227,53 @@ exports.createRepost = async (req, res) => {
   } catch (error) {
     console.error('Error reposting:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const saveVideo = (file, userId) => {
+  const userDir = path.join('/etc/ec/data/reels', userId.toString());
+  if (!fs.existsSync(userDir)) {
+    fs.mkdirSync(userDir, { recursive: true });
+  }
+
+  const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
+  fs.writeFileSync(filePath, file.data);
+  return filePath;
+};
+
+exports.createReel = async (req, res) => {
+  const { tagUser, caption, location } = req.body;
+  const userId = req.params.userId;
+  const videos = req.files && req.files.video;
+
+  try {
+    const reel = await Reel.create({ userId, location, tagUser, caption });
+
+    if (videos) {
+      const videoUrls = [];
+
+      if (Array.isArray(videos)) {
+        // Handle multiple videos
+        videos.forEach(video => {
+          const videoPath = saveVideo(video, userId);
+          const videoUrl = `https://politiks.aindriya.co.uk/reels/${userId}/${path.basename(videoPath)}`;
+          videoUrls.push(videoUrl);
+        });
+      } else {
+        // Handle single video
+        const videoPath = saveVideo(videos, userId);
+        const videoUrl = `https://politiks.aindriya.co.uk/reels/${userId}/${path.basename(videoPath)}`;
+        videoUrls.push(videoUrl);
+      }
+
+      // Save video URLs in the Reel model
+      reel.video = videoUrls.join(','); // Store as a comma-separated string if multiple videos
+      await reel.save();
+    }
+
+    res.status(201).json({ message: 'Reel created successfully', reel });
+  } catch (error) {
+    console.error('Error creating reel:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
