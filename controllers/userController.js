@@ -514,6 +514,53 @@ console.log("interestNames----------",interestNames);
     }
 };
 
+// const saveImage = (file, userId) => {
+//   const userDir = path.join('/etc/ec/data/post', userId.toString());
+//   if (!fs.existsSync(userDir)) {
+//     fs.mkdirSync(userDir, { recursive: true });
+//   }
+
+//   const filePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
+//   fs.writeFileSync(filePath, file.data);
+//   return filePath;
+// };
+
+// exports.createPost = async (req, res) => {
+//   const { tagUser, caption, location } = req.body;
+//   const userId = req.params.id;
+//   const images = req.files && req.files.image;
+
+//   try {
+//     const post = await Post.create({ userId, location, tagUser, caption });
+
+//     if (images) {
+//       const imageUrls = [];
+
+//       if (Array.isArray(images)) {
+//         // Handle multiple images
+//         images.forEach(image => {
+//           const imagePath = saveImage(image, userId);
+//           const imageUrl = `https://politiks.aindriya.co.uk/post/${userId}/${path.basename(imagePath)}`;
+//           imageUrls.push(imageUrl);
+//         });
+//       } else {
+//         // Handle single image
+//         const imagePath = saveImage(images, userId);
+//         const imageUrl = `https://politiks.aindriya.co.uk/post/${userId}/${path.basename(imagePath)}`;
+//         imageUrls.push(imageUrl);
+//       }
+
+//       // Save image URLs in the Post model
+//       post.image = imageUrls;
+//       await post.save();
+//     }
+
+//     res.status(201).json({ message: 'Post created successfully', post });
+//   } catch (error) {
+//     console.error('Error creating post:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
 const saveImage = (file, userId) => {
   const userDir = path.join('/etc/ec/data/post', userId.toString());
   if (!fs.existsSync(userDir)) {
@@ -525,13 +572,31 @@ const saveImage = (file, userId) => {
   return filePath;
 };
 
+const savePostVideo = (file, userId) => {
+  const userDir = path.join('/etc/ec/data/post', userId.toString());
+  if (!fs.existsSync(userDir)) {
+    fs.mkdirSync(userDir, { recursive: true });
+  }
+
+  const PostfilePath = path.join(userDir, file.name.replace(/\s+/g, '_'));
+  fs.writeFileSync(PostfilePath, file.data);
+  return PostfilePath;
+};
+
 exports.createPost = async (req, res) => {
   const { tagUser, caption, location } = req.body;
   const userId = req.params.id;
   const images = req.files && req.files.image;
+  const videoFile = req.files && req.files.video;
 
   try {
-    const post = await Post.create({ userId, location, tagUser, caption });
+    const post = await Post.create({ 
+      userId, 
+      location: location || null, 
+      tagUser: tagUser || null, 
+      caption: caption || null,
+      video: null // Initially set video field to null
+    });
 
     if (images) {
       const imageUrls = [];
@@ -555,13 +620,22 @@ exports.createPost = async (req, res) => {
       await post.save();
     }
 
+    if (videoFile) {
+      // Handle video file
+      const videoPath = savePostVideo(videoFile, userId);
+      const videoUrl = `https://politiks.aindriya.co.uk/post/${userId}/${path.basename(videoPath)}`;
+      
+      // Update the post with video URL
+      post.video = videoUrl;
+      await post.save();
+    }
+
     res.status(201).json({ message: 'Post created successfully', post });
   } catch (error) {
     console.error('Error creating post:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
 /*
 exports.getAllPost = async (req, res) => {
   const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
