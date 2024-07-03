@@ -22,8 +22,6 @@ const CommentLike = require('../models/CommentLike');
 const SubCommentLike = require('../models/SubCommentLike');
 
 
-
-
 const { generateOTP, sendOTP } = require('../middleware/otpService');
 
 const jwt = require('jsonwebtoken');
