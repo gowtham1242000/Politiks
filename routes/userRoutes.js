@@ -89,6 +89,13 @@ router.post('/createRepost/:postId', userController.createRepost);
 
 //Reels
 router.post('/createReel/:userId', userController.createReel);
+router.put('/updateReel/:reelId', userController.updateReel);
+router.get('/getReelByUserId/:userId', userController.getReelByUserId);
+router.delete('/deleteReel/:reelId', userController.deleteReel);
+router.get('/getAllReels', userController.getAllReels);
+
+router.get('/getShareFollowerList/:userId', userController.getShareFollowerList);
+
 
 module.exports = router;
 

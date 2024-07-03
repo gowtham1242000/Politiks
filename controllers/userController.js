@@ -2277,3 +2277,181 @@ exports.createReel = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+
+
+exports.updateReel = async (req, res) => {
+  const reelId = req.params.reelId;
+  const { tagUser, caption, location } = req.body;
+
+  try {
+    const reel = await Reel.findByPk(reelId);
+    if (!reel) {
+      return res.status(404).json({ message: 'Reel not found' });
+    }
+
+    reel.caption = caption || reel.caption;
+    reel.location = location || reel.location;
+    reel.tagUser = tagUser || reel.tagUser;
+
+    await reel.save();
+    res.status(200).json({ message: 'Reel updated successfully', reel });
+  } catch (error) {
+    console.error('Error updating reel:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+exports.getReelByUserId = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const reels = await Reel.findAll({ where: { userId }, order: [['createdAt', 'DESC']] });
+    res.status(200).json(reels);
+  } catch (error) {
+    console.error('Error fetching reels:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+exports.deleteReel = async (req, res) => {
+  const reelId = req.params.reelId;
+
+  try {
+    const reel = await Reel.findByPk(reelId);
+    if (!reel) {
+      return res.status(404).json({ message: 'Reel not found' });
+    }
+
+    await reel.destroy();
+    res.status(200).json({ message: 'Reel deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting reel:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+/*
+exports.getAllReels = async (req, res) => {
+  try {
+    // Fetch all reels in descending order of creation time
+    const reels = await Reel.findAll({
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Respond with the list of reels
+    res.status(200).json(reels);
+  } catch (error) {
+    console.error('Error fetching reels:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+*/
+
+
+exports.getAllReels = async (req, res) => {
+  try {
+    // Fetch all reels in descending order of creation time
+    const reels = await Reel.findAll({
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Extract unique userIds from reels
+    const userIds = [...new Set(reels.map(reel => reel.userId))];
+
+    // Fetch user details for the unique userIds
+    const userDetails = await UserDetails.findAll({
+      where: {
+        userId: userIds
+      },
+      attributes: ['id', 'userId', 'role', 'userName', 'userProfile']
+    });
+
+    // Create a map of userId to userDetails
+    const userDetailsMap = userDetails.reduce((acc, userDetail) => {
+      acc[userDetail.userId] = userDetail;
+      return acc;
+    }, {});
+
+    // Attach userDetails to each reel
+    const reelsWithUserDetails = reels.map(reel => {
+      return {
+        ...reel.dataValues,
+        userDetails: userDetailsMap[reel.userId] || {}
+      };
+    });
+
+    // Respond with the list of reels with user details
+    res.status(200).json(reelsWithUserDetails);
+  } catch (error) {
+    console.error('Error fetching reels:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+/*
+exports.getShareFollowerList = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    // Fetch followers of the user
+    const followers = await Follow.findAll({
+      where: { followingId: userId },
+      limit: 5,
+      order: [['createdAt', 'DESC']],
+      attributes: ['followerId']
+    });
+
+    // Extract followerIds
+    const followerIds = followers.map(f => f.followerId);
+
+    // Fetch user details for these followerIds
+    const followerDetails = await UserDetails.findAll({
+      where: { userId: followerIds },
+      attributes: ['id', 'userId', 'role', 'userName', 'userProfile']
+    });
+
+    res.status(200).json(followerDetails);
+  } catch (error) {
+    console.error('Error fetching follower list:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+*/
+
+exports.getShareFollowerList = async (req, res) => {
+  const userId = req.params.userId;
+  const { name } = req.query; // Get the name from the query parameters
+
+  try {
+    // Fetch followers of the user
+    const followers = await Follow.findAll({
+      where: { followingId: userId },
+      attributes: ['followerId']
+    });
+
+    // Extract followerIds
+    const followerIds = followers.map(f => f.followerId);
+
+    // Build the where condition based on the presence of the name query parameter
+    const whereCondition = { userId: followerIds };
+    if (name) {
+      whereCondition.userName = { [Sequelize.Op.like]: `%${name}%` };
+    }
+
+    // Fetch user details for these followerIds with optional name filtering
+    const followerDetails = await UserDetails.findAll({
+      where: whereCondition,
+      attributes: ['id', 'userId', 'role', 'userName', 'userProfile'],
+      limit: 5,
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.status(200).json(followerDetails);
+  } catch (error) {
+    console.error('Error fetching follower list:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
