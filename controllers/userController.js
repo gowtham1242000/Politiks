@@ -1154,15 +1154,63 @@ exports.uploadVerificationFiles = async (req, res) => {
 };
 
 
+// exports.getUserDetails = async (req, res) => {
+//   const userId = req.params.id;
+//   console.log("userId---------oog id", userId);
+  
+//   try {
+//     // Find user details by userId
+//     console.log("userId------------", userId);
+//     const userDetails = await UserDetails.findOne({
+//       where: { userId: userId },
+//     });
+
+//     if (!userDetails) {
+//       return res.status(404).json({ message: 'User details not found' });
+//     }
+
+//     // Fetch fullname from User table
+//     const user = await User.findOne({
+//       where: { id: userId },
+//       attributes: ['fullName'],
+//     });
+
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     // Fetch myParty details by name
+//     let myPartyData;
+//     try {
+//       myPartyData = await MyParty.findOne({
+//         where: { name: userDetails.myParty },
+//         attributes: ['icons', 'name'] // Add any other fields you need from myParty table
+//       });
+//     } catch (error) {
+//       console.warn('myParty details not found:', error);
+//     }
+
+//     // Merge userDetails, user, and myParty data
+//     const response = {
+//       ...userDetails.toJSON(),
+//       fullName: user.fullName,
+//       myParty: myPartyData ? myPartyData.toJSON() : null
+//     };
+
+//     res.status(200).json(response);
+//   } catch (error) {
+//     console.error('Error fetching user details:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// };
+
 exports.getUserDetails = async (req, res) => {
   const userId = req.params.id;
-  console.log("userId---------oog id", userId);
-  
+
   try {
     // Find user details by userId
-    console.log("userId------------", userId);
     const userDetails = await UserDetails.findOne({
-      where: { userId: userId },
+      where: { userId },
     });
 
     if (!userDetails) {
@@ -1190,11 +1238,19 @@ exports.getUserDetails = async (req, res) => {
       console.warn('myParty details not found:', error);
     }
 
-    // Merge userDetails, user, and myParty data
+    // Fetch follower count
+    const followerCount = await Follow.count({ where: { followingId: userId } });
+
+    // Fetch following count
+    const followingCount = await Follow.count({ where: { followerId: userId } });
+
+    // Merge userDetails, user, and myParty data with follower and following counts
     const response = {
       ...userDetails.toJSON(),
       fullName: user.fullName,
-      myParty: myPartyData ? myPartyData.toJSON() : null
+      myParty: myPartyData ? myPartyData.toJSON() : null,
+      followerCount,
+      followingCount
     };
 
     res.status(200).json(response);
@@ -1203,7 +1259,6 @@ exports.getUserDetails = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 exports.getUserAllPostsByUserId = async (req, res) => {
 console.log("get request from front end----------------");
