@@ -895,6 +895,7 @@ exports.getAllPost = async (req, res) => {
         id: originalPost.id,
         userId: originalPost.userId,
         image: imageArray,
+        video: originalPost.video,
         location: originalPost.location,
         tagUser: originalPost.tagUser,
         caption: originalPost.caption,
@@ -939,6 +940,7 @@ exports.getAllPost = async (req, res) => {
         id: post.id,
         userId: post.userId,
         image: imageArray, // Use 'images' instead of 'image' for consistency
+        video: post.video,
         location: post.location,
         tagUser: post.tagUser,
         caption: post.caption,
@@ -962,6 +964,7 @@ exports.getAllPost = async (req, res) => {
           id: originalPostDetail.id,
           userId: originalPostDetail.userId,
           image: originalPostDetail.image,
+          video: originalPostDetail.video,
           location: originalPostDetail.location,
           tagUser: originalPostDetail.tagUser,
           caption: originalPostDetail.caption,
