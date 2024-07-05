@@ -848,6 +848,7 @@ exports.getAllPost = async (req, res) => {
   }
 };
 */
+/*
 exports.getAllPost = async (req, res) => {
   const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
   console.log("User ID from request params:", userId);
@@ -970,6 +971,291 @@ exports.getAllPost = async (req, res) => {
           caption: originalPostDetail.caption,
           userDetails: originalPostDetail.userDetails, // Ensure userDetails is included
         };
+      }
+
+      return formattedPost;
+    });
+
+    res.status(200).json(postsWithDetails);
+  } catch (error) {
+    console.error('Error fetching posts with details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+/*
+exports.getAllPost = async (req, res) => {
+  const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
+  console.log("User ID from request params:", userId);
+
+  try {
+    // Step 1: Fetch all posts in descending order of createdAt
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Step 2: Extract postIds and userIds from posts
+    const postIds = posts.map(post => post.id);
+    const userIds = posts.map(post => post.userId);
+    const originalPostIds = posts.map(post => post.originalPostId).filter(id => id !== null);
+
+    // Step 3: Fetch user details for the extracted userIds
+    const userDetails = await UserDetails.findAll({
+      where: { userId: userIds },
+    });
+
+    // Step 4: Fetch all likes and comments for the posts
+    const postLikes = await PostLike.findAll({
+      where: { postId: postIds },
+    });
+    const postComments = await Comment.findAll({
+      where: { postId: postIds },
+    });
+
+    // Step 5: Fetch original posts if they exist
+    const originalPosts = await Post.findAll({
+      where: { id: originalPostIds },
+    });
+
+    const originalPostDetails = await Promise.all(originalPosts.map(async originalPost => {
+      const userDetail = await UserDetails.findOne({
+        where: { userId: originalPost.userId },
+      });
+      let imageArray;
+      try {
+        imageArray = JSON.parse(originalPost.image);
+      } catch (error) {
+        imageArray = [originalPost.image]; // If parsing fails, fallback to single image
+      }
+      return {
+        id: originalPost.id,
+        userId: originalPost.userId,
+        image: imageArray,
+        video: originalPost.video,
+        location: originalPost.location,
+        tagUser: originalPost.tagUser,
+        caption: originalPost.caption,
+        userDetails: {
+          id: userDetail.userId,
+          userName: userDetail.userName,
+          email: userDetail.email,
+          userProfile: userDetail.userProfile,
+          location: userDetail.state,
+          createdAt: userDetail.createdAt,
+          updatedAt: userDetail.updatedAt,
+        }, // Include only updatedAt field
+      };
+    }));
+
+    // Create a map for quick access to original post details
+    const originalPostMap = {};
+    originalPostDetails.forEach(detail => {
+      originalPostMap[detail.id] = detail;
+    });
+
+    console.log("Post likes fetched:", postLikes);
+    console.log("Post comments fetched:", postComments);
+
+    // Step 6: Combine posts, user details, like count, comment count, liked flag, and original post details into a single response
+    const postsWithDetails = posts.map(post => {
+      const userDetail = userDetails.find(detail => detail.userId === post.userId);
+      const likeCount = postLikes.filter(like => like.postId === post.id).length;
+      const commentCount = postComments.filter(comment => comment.postId === post.id).length;
+
+      const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
+      const originalPostDetail = post.originalPostId ? originalPostMap[post.originalPostId] : null;
+
+      let imageArray;
+      try {
+        imageArray = JSON.parse(post.image);
+      } catch (error) {
+        imageArray = [post.image]; // If parsing fails, fallback to single image
+      }
+
+      const formattedPost = {
+        id: post.id,
+        userId: post.userId,
+        image: imageArray, // Use 'images' instead of 'image' for consistency
+        video: post.video,
+        location: post.location,
+        tagUser: post.tagUser,
+        caption: post.caption,
+        likeCount: likeCount,
+        commentCount: commentCount,
+        liked: liked,
+        userDetails: userDetail ? {
+          id: userDetail.userId,
+          userName: userDetail.userName,
+          email: userDetail.email,
+          userProfile: userDetail.userProfile,
+          location: userDetail.state,
+          createdAt: userDetail.createdAt,
+          updatedAt: userDetail.updatedAt,
+        } : null,
+      };
+
+      if (originalPostDetail) {
+        formattedPost.isRepost = true;
+        formattedPost.repostDetails = {
+          id: originalPostDetail.id,
+          userId: originalPostDetail.userId,
+          image: originalPostDetail.image,
+          video: originalPostDetail.video,
+          location: originalPostDetail.location,
+          tagUser: originalPostDetail.tagUser,
+          caption: originalPostDetail.caption,
+          userDetails: originalPostDetail.userDetails, // Ensure userDetails is included
+        };
+
+        // Swap the user details to reflect the original post user and repost user
+        const originalUserDetails = formattedPost.userDetails;
+        formattedPost.userDetails = formattedPost.repostDetails.userDetails;
+        formattedPost.repostDetails.userDetails = originalUserDetails;
+      }
+
+      return formattedPost;
+    });
+
+    res.status(200).json(postsWithDetails);
+  } catch (error) {
+    console.error('Error fetching posts with details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+
+exports.getAllPost = async (req, res) => {
+  const userId = parseInt(req.params.userId, 10); // Ensure userId is an integer
+  console.log("User ID from request params:", userId);
+
+  try {
+    // Step 1: Fetch all posts in descending order of createdAt
+    const posts = await Post.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Step 2: Extract postIds and userIds from posts
+    const postIds = posts.map(post => post.id);
+    const userIds = posts.map(post => post.userId);
+    const originalPostIds = posts.map(post => post.originalPostId).filter(id => id !== null);
+
+    // Step 3: Fetch user details for the extracted userIds
+    const userDetails = await UserDetails.findAll({
+      where: { userId: userIds },
+    });
+
+    // Step 4: Fetch all likes and comments for the posts
+    const postLikes = await PostLike.findAll({
+      where: { postId: postIds },
+    });
+    const postComments = await Comment.findAll({
+      where: { postId: postIds },
+    });
+
+    // Step 5: Fetch original posts if they exist
+    const originalPosts = await Post.findAll({
+      where: { id: originalPostIds },
+    });
+
+    const originalPostDetails = await Promise.all(originalPosts.map(async originalPost => {
+      const userDetail = await UserDetails.findOne({
+        where: { userId: originalPost.userId },
+      });
+      let imageArray;
+      try {
+        imageArray = JSON.parse(originalPost.image);
+      } catch (error) {
+        imageArray = [originalPost.image]; // If parsing fails, fallback to single image
+      }
+      return {
+        id: originalPost.id,
+        userId: originalPost.userId,
+        image: imageArray,
+        video: originalPost.video,
+        location: originalPost.location,
+        tagUser: originalPost.tagUser,
+        caption: originalPost.caption,
+        userDetails: {
+          id: userDetail.userId,
+          userName: userDetail.userName,
+          email: userDetail.email,
+          userProfile: userDetail.userProfile,
+          location: userDetail.state,
+          createdAt: userDetail.createdAt,
+          updatedAt: userDetail.updatedAt,
+        }, // Include only updatedAt field
+      };
+    }));
+
+    // Create a map for quick access to original post details
+    const originalPostMap = {};
+    originalPostDetails.forEach(detail => {
+      originalPostMap[detail.id] = detail;
+    });
+
+    console.log("Post likes fetched:", postLikes);
+    console.log("Post comments fetched:", postComments);
+
+    // Step 6: Combine posts, user details, like count, comment count, liked flag, and original post details into a single response
+    const postsWithDetails = posts.map(post => {
+      const userDetail = userDetails.find(detail => detail.userId === post.userId);
+      const likeCount = postLikes.filter(like => like.postId === post.id).length;
+      const commentCount = postComments.filter(comment => comment.postId === post.id).length;
+
+      const liked = postLikes.some(like => like.postId === post.id && like.userId === userId);
+      const originalPostDetail = post.originalPostId ? originalPostMap[post.originalPostId] : null;
+
+      let imageArray;
+      try {
+        imageArray = JSON.parse(post.image);
+      } catch (error) {
+        imageArray = [post.image]; // If parsing fails, fallback to single image
+      }
+
+      // Check if the image array contains only null values
+      if (imageArray && imageArray.length === 1 && imageArray[0] === null) {
+        imageArray = null;
+      }
+
+      const formattedPost = {
+        id: post.id,
+        userId: post.userId,
+        image: imageArray, // Use 'images' instead of 'image' for consistency
+        video: post.video,
+        location: post.location,
+        tagUser: post.tagUser,
+        caption: post.caption,
+        likeCount: likeCount,
+        commentCount: commentCount,
+        liked: liked,
+        userDetails: userDetail ? {
+          id: userDetail.userId,
+          userName: userDetail.userName,
+          email: userDetail.email,
+          userProfile: userDetail.userProfile,
+          location: userDetail.state,
+          createdAt: userDetail.createdAt,
+          updatedAt: userDetail.updatedAt,
+        } : null,
+      };
+
+      if (originalPostDetail) {
+        formattedPost.isRepost = true;
+        formattedPost.repostDetails = {
+          id: originalPostDetail.id,
+          userId: originalPostDetail.userId,
+          image: originalPostDetail.image,
+          video: originalPostDetail.video,
+          location: originalPostDetail.location,
+          tagUser: originalPostDetail.tagUser,
+          caption: originalPostDetail.caption,
+          userDetails: originalPostDetail.userDetails, // Ensure userDetails is included
+        };
+
+        // Swap the user details to reflect the original post user and repost user
+        const originalUserDetails = formattedPost.userDetails;
+        formattedPost.userDetails = formattedPost.repostDetails.userDetails;
+        formattedPost.repostDetails.userDetails = originalUserDetails;
       }
 
       return formattedPost;
@@ -1329,7 +1615,7 @@ exports.getAllMyParties = async (req, res) => {
 
 exports.createComment = async (req, res) => {
   const { userId, postId, content } = req.body;
-
+console.log("----------testing-------------",req.body);
   try {
       const newComment = await Comment.create({ userId, postId, content });
       res.status(201).json({ message: 'Comment created successfully', comment: newComment });
@@ -1645,7 +1931,8 @@ try {
 exports.getCommentsByPostId = async (req, res) => {
   const postId = req.params.postId;
   const userId = req.params.userId; // Assuming userId is passed in the request params
-
+console.log("postId---------------------",postId);
+console.log("userId-------------------------",userId);
   try {
     // Fetch comments by postId in descending order
     const comments = await Comment.findAll({
@@ -1887,6 +2174,9 @@ exports.unlikeSubComment = async (req, res) => {
 exports.unlikeSubComment = async (req, res) => {
   const subCommentId = req.params.subCommentId; // Corrected parameter name
   const { userId } = req.body;
+console.log("req.params.subCommentId---------------",req.params.subCommentId)
+console.log("subCommentId----------------",subCommentId);
+console.log("req.body------------------",req.body);
 
   try {
     // Check if the like entry exists
@@ -2249,7 +2539,6 @@ exports.likeUnlikePost = async (req, res) => {
               userId
           }
       });
-
       if (existingLike) {
           // Unlike the post if already liked
           await PostLike.destroy({
@@ -2346,7 +2635,8 @@ exports.createRepost = async (req, res) => {
     // Create a new post with the new details or fallback to original post details
     const newPost = await Post.create({
       userId,
-      image: imageUrls, // Store image as an array
+      image: imageUrls,
+      video: originalPost.video, // Store image as an array
       location: location || originalPost.location,
       tagUser: tagUser || originalPost.tagUser,
       caption: caption || originalPost.caption,
@@ -2583,5 +2873,42 @@ exports.getShareFollowerList = async (req, res) => {
   } catch (error) {
     console.error('Error fetching follower list:', error);
     res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+
+
+exports.searchUsers = async (req, res) => {
+  const { name, location } = req.query;
+
+  if (!name && !location) {
+    return res.status(400).json({ message: 'Please provide a search parameter: name or location' });
+  }
+
+  try {
+    let searchCriteria = {};
+
+    if (name) {
+      searchCriteria.userName = {
+        [Op.like]: `%${name}%`
+      };
+    }
+
+    if (location) {
+      searchCriteria.state = {
+        [Op.like]: `%${location}%`
+      };
+    }
+
+    const users = await UserDetails.findAll({
+      where: searchCriteria,
+      attributes: ['id', 'userId', 'userName', 'state', 'userProfile', 'role']
+    });
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error searching users:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };

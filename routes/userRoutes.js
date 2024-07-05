@@ -63,7 +63,7 @@ router.post('/likeComment/:commentId', userController.likeComment);
 router.post('/unlikeComment/:commentId', userController.unlikeComment);
 
 router.post('/likeSubComment/:commentId', userController.likeSubComment);
-router.post('/unlikeSubComment/:commentId', userController.unlikeSubComment);
+router.post('/unlikeSubComment/:subCommentId', userController.unlikeSubComment);
 
 router.put('/updateSubComment/:subCommentId', userController.updateSubComment);
 router.delete('/deleteSubComment/:subCommentId/:userId', userController.deleteSubComment);
@@ -96,6 +96,7 @@ router.get('/getAllReels', userController.getAllReels);
 
 router.get('/getShareFollowerList/:userId', userController.getShareFollowerList);
 
+router.get('/searchUsers', userController.searchUsers);
 
 module.exports = router;
 
