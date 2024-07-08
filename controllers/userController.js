@@ -29,6 +29,7 @@ const JWT_SECRET = 'your_super_secret_key_12345';
 const {Sequelize} =require('sequelize')
 
 // Ensure your function is declared as an async function
+/*
 exports.register = async (req, res) => {
   const { email, password, userName, googleId } = req.body;
 console.log("req.body----",req.body)
@@ -55,13 +56,60 @@ console.log("req.body----",req.body)
 
           return res.json({ message: 'User registered successfully', user });
       }
-     
+ 
+try{
+if (googleId) {
+  // Social login flow via Google OAuth
+ 	 let user = await User.findOne({ where: { googleId } });
+	console.log("user------------------",user)
+  	if (user) {
+		console.log("user-----------alredy------------exit")
+    // User exists, handle accordingly (e.g., update user details if needed)
+//    		return res.status(400).json({ message: 'User already exists', user });
+//	  }
+
+  // Check if a user with the provided email already exists
+  	const existingUser = await User.findOne({ where: { email } });
+	console.log("existingUser-----------------",existingUser);
+
+  	if (existingUser) {
+    		const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
+    		console.log("userDetails-----------------", userDetails);
+
+    		if (!userDetails) {
+      // User exists but no details, remove the user
+      			await User.destroy({ where: { id: existingUser.id } });
+    		} else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
+      // Remove old user and details
+      			await UserDetails.destroy({ where: { userId: existingUser.id } });
+      			await User.destroy({ where: { id: existingUser.id } });
+    		} else {
+      			return res.status(400).json({ message: 'User already exists or not allowed to register' });
+    		}
+  	}
+	}
+  // Create new user for Google OAuth
+  user = await User.create({
+    email,
+    fullName: userName, // Assuming userName maps to fullName
+    googleId,
+    // Add other relevant fields
+  });
+
+  // Optionally generate JWT token and respond
+  // const token = generateJWTToken(user); // Implement this function as needed
+
+  return res.json({ message: 'User registered successfully', user });
+}    
   else {
+console.log("entering the sourse-----------------&&&&&&&&&&&&&&&&&&_________________****************")
       // Normal registration flow with email and password
       const existingUser = await User.findOne({ where: { email } });
 
       if (existingUser) {
         const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
+console.log("userDetails-----------------",userDetails)
+//return
         if (!userDetails) {
           // User exists but no details, remove the user
           await User.destroy({ where: { id: existingUser.id } });
@@ -92,6 +140,102 @@ console.log("req.body----",req.body)
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+
+exports.register = async (req, res) => {
+  const { email, password, userName, googleId } = req.body;
+
+  try {
+    if (googleId) {
+      // Social login flow via Google OAuth
+      let user = await User.findOne({ where: { googleId } });
+      console.log("user------------------", user);
+
+      if (user) {
+        // Check if a user with the provided email already exists
+        const existingUser = await User.findOne({ where: { email } });
+        console.log("existingUser-----------------", existingUser.id);
+//return
+        if (existingUser) {
+          const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
+          console.log("userDetails-----------------", userDetails);
+
+          if (!userDetails) {
+            // User exists but no details, remove the user
+            await LeaderVerify.destroy({ where: { userId: existingUser.id } });
+	    await UserInterest.destroy({ where: { userId: existingUser.id } });
+            await User.destroy({ where: { id: existingUser.id } });
+          }
+           else if (userDetails.action === 'Pending' || userDetails.action === 'Declined' && userDetails.role == " Leader") {
+             //Remove old user and details
+          //  await UserDetails.destroy({ where: { userId: existingUser.id } });
+            //await User.destroy({ where: { id: existingUser.id } });
+	    return res.status(400).json({ message: 'Admin will not Approve kindle weit for some Time' });
+          }
+	   else if (userDetails.action === 'Approved' && userDetails.status === true) {
+            // UserDetails is available and action is Approved and status is true, allow login
+            return res.status(200).json({ message: 'Login successful', user: existingUser });
+          } 
+	else {
+            return res.status(400).json({ message: 'User already exists or not allowed to register' });
+          }
+        }
+      }
+
+      // Create new user for Google OAuth
+      user = await User.create({
+        email,
+        fullName: userName, // Assuming userName maps to fullName
+        googleId,
+        // Add other relevant fields
+      });
+
+      // Optionally generate JWT token and respond
+      // const token = generateJWTToken(user); // Implement this function as needed
+
+      return res.json({ message: 'User registered successfully', user });
+    } else {
+      console.log("Normal registration flow");
+
+      // Normal registration flow with email and password
+      const existingUser = await User.findOne({ where: { email } });
+
+      if (existingUser) {
+        const userDetails = await UserDetails.findOne({ where: { userId: existingUser.id } });
+        console.log("userDetails-----------------", userDetails);
+
+        if (!userDetails) {
+          // User exists but no details, remove the user
+          await User.destroy({ where: { id: existingUser.id } });
+        } else if (userDetails.action === 'Pending' || userDetails.action === 'Declined') {
+          // Remove old user and details
+          await UserDetails.destroy({ where: { userId: existingUser.id } });
+          await User.destroy({ where: { id: existingUser.id } });
+        } else {
+          return res.status(400).json({ message: 'User already exists or not allowed to register' });
+        }
+      }
+
+      // Proceed with normal registration logic
+      const newUser = await User.create({
+        email,
+        password, // Assuming password is passed correctly
+        fullName: userName || null,
+        // Add other relevant fields
+      });
+
+      // Optionally generate JWT token and respond
+      // const token = generateJWTToken(newUser); // Implement this function as needed
+
+      return res.status(201).json({ message: 'User registered successfully', user: newUser });
+    }
+  } catch (error) {
+    console.error('Error processing registration or social login:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 exports.createUserDetails = async (req, res) => {
     const { userName, role, dateOfBirth, gender, country, state } = req.body;
 
@@ -207,7 +351,7 @@ exports.login = async (req, res) => {
 
 exports.goToHome = async (req, res) => {
   const userId = req.params.id;
-
+console.log("user-------id-----------------------------------------------------------------------------------------------------------------sbhhjuinedncjnjnsjmck------------------------------------############################################---------------------###########################---------------",req.params.id);
   try {
     const user = await User.findOne({ where: { id: userId } });
 
@@ -1791,13 +1935,43 @@ exports.updateReel = async (req, res) => {
   }
 };
 
-
+/*
 exports.getReelByUserId = async (req, res) => {
   const userId = req.params.userId;
 
   try {
     const reels = await Reel.findAll({ where: { userId }, order: [['createdAt', 'DESC']] });
     res.status(200).json(reels);
+  } catch (error) {
+    console.error('Error fetching reels:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+*/
+
+exports.getReelByUserId = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    // Fetch user details for the given userId
+    const userDetails = await UserDetails.findOne({ where: { userId } });
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    // Fetch reels for the given userId
+    const reels = await Reel.findAll({
+      where: { userId },
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Combine the reels and userDetails into the response object
+    const response = {
+      userDetails,
+      reels
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error fetching reels:', error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -1900,7 +2074,7 @@ exports.getShareFollowerList = async (req, res) => {
 
 
 
-
+/*
 exports.searchUsers = async (req, res) => {
   const { name, location } = req.query;
 
@@ -1934,3 +2108,38 @@ exports.searchUsers = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+
+
+exports.searchUsers = async (req, res) => {
+  const { name, location } = req.query;
+
+  if (!name && !location) {
+    return res.status(400).json({ message: 'Please provide a search parameter: name or location' });
+  }
+
+  try {
+    let searchCriteria = {};
+
+    if (name) {
+      searchCriteria.userName = {
+        [Op.like]: `%${name}%`
+      };
+    } else if (location) {
+      searchCriteria.state = {
+        [Op.like]: `%${location}%`
+      };
+    }
+
+    const users = await UserDetails.findAll({
+      where: searchCriteria,
+      attributes: ['id', 'userId', 'userName', 'state', 'userProfile', 'role']
+    });
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error searching users:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
