@@ -1107,7 +1107,7 @@ exports.getUserDetails = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
+/*
 exports.getUserAllPostsByUserId = async (req, res) => {
 console.log("get request from front end----------------");
   const userId = parseInt(req.params.id, 10); // Convert userId to an integer
@@ -1134,7 +1134,49 @@ console.log("userId-----------------",userId)
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+exports.getUserAllPostsByUserId = async (req, res) => {
+  console.log("get request from front end----------------");
+  const userId = parseInt(req.params.id, 10); // Convert userId to an integer
+  console.log("userId-----------------", userId);
 
+  if (isNaN(userId)) {
+    // If userId is not a valid integer, return a 400 response
+    return res.status(400).json({ message: 'Invalid userId' });
+  }
+
+  try {
+    // Find all posts for the specified userId in descending order
+    const posts = await Post.findAll({
+      where: { userId: userId },
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (!posts || posts.length === 0) {
+      return res.status(404).json({ message: 'No posts found for the user' });
+    }
+
+    // Format the image URLs in each post
+    const formattedPosts = posts.map(post => ({
+      id: post.id,
+      userId: post.userId,
+      image: JSON.parse(post.image), // Parse the JSON string to convert it to an array
+      location: post.location,
+      tagUser: post.tagUser,
+      caption: post.caption,
+      likeCount: post.likeCount,
+      video: post.video,
+      originalPostId: post.originalPostId,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt
+    }));
+
+    res.status(200).json(formattedPosts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 
 
@@ -1183,6 +1225,44 @@ console.log("----------testing-------------",req.body);
       res.status(500).json({ message: 'Internal server error' });
   }
 };
+/*
+exports.createComment = async (req, res) => {
+  const { userId, postId, content } = req.body;
+  console.log("----------testing-------------", req.body);
+  
+  try {
+    // Create the new comment
+    const newComment = await Comment.create({ userId, postId, content });
+    console.log("New comment created:", newComment);
+
+    // Retrieve the post details to get the userId of the post owner
+    const post = await Post.findByPk(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Create a notification for the post owner
+    const notification = await Notification.create({
+      userId: post.userId,  // Notify the owner of the post
+      postId,
+      type: 'comment',
+      content,
+    });
+
+    // Emit events to notify clients via Socket.io
+    req.io.emit('newComment', { postId, userId, content });
+
+    // Emit event for new notification only to the post owner
+    console.log('Emitting newNotification to user:', post.userId, notification);
+    req.io.to(`user_${post.userId}`).emit('newNotification', notification); // Emit to specific user
+
+    res.status(201).json({ message: 'Comment created successfully', comment: newComment, notification });
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
 
 exports.updateComment = async (req, res) => {
   const id = req.params.commentId;
