@@ -1265,6 +1265,44 @@ exports.createComment = async (req, res) => {
 };
 
 
+exports.createSubComment = async (req, res) => {
+  const { userId, commentId, subComment } = req.body;
+  console.log("----------testing-------------", req.body);
+  
+  try {
+    // Create the new sub-comment
+    const newSubComment = await SubComment.create({ userId, commentId, subComment });
+    console.log("New sub-comment created:", newSubComment);
+
+    // Retrieve the comment details to get the userId of the comment owner
+    const comment = await Comment.findByPk(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    // Create a notification for the comment owner
+    const notification = await Notification.create({
+      userId: comment.userId,  // Notify the owner of the comment
+      commentId,
+      type: 'sub-comment',
+      content: subComment,
+    });
+
+    // Emit events to notify clients via Socket.io
+    req.io.emit('newSubComment', { commentId, userId, subComment });
+
+    // Emit event for new notification only to the comment owner
+    console.log('Emitting newSubCommentNotification to user:', comment.userId, notification);
+    req.io.to(`user_${comment.userId}`).emit('newSubCommentNotification', notification); // Emit to specific user
+
+    res.status(201).json({ message: 'Sub-comment created successfully', subComment: newSubComment, notification });
+  } catch (error) {
+    console.error('Error creating sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 // exports.createComment = async (req, res) => {
 //   const { userId, postId, content } = req.body;
 //   console.log("----------testing-------------", req.body);
@@ -1578,19 +1616,83 @@ console.log("userId-------------------------",userId);
 };
 
 
-  exports.createSubComment = async (req, res) => {
-    const { userId, commentId, subComment } = req.body;
+  // exports.createSubComment = async (req, res) => {
+  //   const { userId, commentId, subComment } = req.body;
 
+  //   try {
+  //       const newSubComment = await SubComment.create({ userId, commentId, subComment });
+  // console.log("newSubComment---------",newSubComment)
+  //       res.status(201).json({ message: 'SubComment created successfully', newSubComment });
+  //   } catch (error) {
+  //       console.error('Error creating subComment:', error);
+  //       res.status(500).json({ message: 'Internal server error' });
+  //   }
+  // };
+
+  exports.createComment = async (req, res) => {
+    const { userId, postId, content } = req.body;
+    console.log("----------testing-------------", req.body);
+    
     try {
-        const newSubComment = await SubComment.create({ userId, commentId, subComment });
-  console.log("newSubComment---------",newSubComment)
-        res.status(201).json({ message: 'SubComment created successfully', newSubComment });
+      // Create the new comment
+      const newComment = await Comment.create({ userId, postId, content });
+      console.log("New comment created:", newComment);
+  
+      // Retrieve the post details to get the userId of the post owner
+      const post = await Post.findByPk(postId);
+      if (!post) {
+        return res.status(404).json({ message: 'Post not found' });
+      }
+  
+      // Create a notification for the post owner
+      const notification = await Notification.create({
+        userId: post.userId,  // Notify the owner of the post
+        postId,
+        type: 'comment',
+        content,
+      });
+  
+      // Emit events to notify clients via Socket.io
+      req.io.emit('newComment', { postId, userId, content });
+  
+      // Emit event for new notification only to the post owner
+      console.log('Emitting newCommentNotification to user:', post.userId, notification);
+      req.io.to(`user_${post.userId}`).emit('newCommentNotification', notification); // Emit to specific user
+  
+      res.status(201).json({ message: 'Comment created successfully', comment: newComment, notification });
     } catch (error) {
-        console.error('Error creating subComment:', error);
-        res.status(500).json({ message: 'Internal server error' });
+      console.error('Error creating comment:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
   };
+  
 
+// exports.likeComment = async (req, res) => {
+//   const commentId = req.params.commentId;
+//   const { userId } = req.body;
+
+//   try {
+//     // Check if the user has already liked this comment
+//     const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
+
+//     if (existingLike) {
+//       return res.status(400).json({ message: 'User has already liked this comment', liked: false });
+//     }
+
+//     // Create a new like entry
+//     await CommentLike.create({ commentId, userId });
+
+//     // Increment the like count
+//     const comment = await Comment.findByPk(commentId);
+//     comment.likeCount += 1;
+//     await comment.save();
+
+//     res.status(200).json({ message: 'Comment liked successfully', liked: true });
+//   } catch (error) {
+//     console.error('Error liking comment:', error);
+//     res.status(500).json({ message: 'Internal server error', liked: false });
+//   }
+// };
 
 exports.likeComment = async (req, res) => {
   const commentId = req.params.commentId;
@@ -1612,12 +1714,30 @@ exports.likeComment = async (req, res) => {
     comment.likeCount += 1;
     await comment.save();
 
-    res.status(200).json({ message: 'Comment liked successfully', liked: true });
+    // Retrieve the comment owner details
+    const commentOwner = await User.findByPk(comment.userId);
+    const liker = await User.findByPk(userId);
+
+    // Create a notification for the comment owner
+    const notificationContent = `${liker.username} liked your comment: ${comment.content}`;
+    const notification = await Notification.create({
+      userId: comment.userId,  // Notify the owner of the comment
+      commentId,
+      type: 'like',
+      content: notificationContent,
+    });
+
+    // Emit event for new like notification only to the comment owner
+    console.log('Emitting newLikeNotification to user:', comment.userId, notification);
+    req.io.to(`user_${comment.userId}`).emit('newCommentLikeNotification', notification); // Emit to specific user
+
+    res.status(200).json({ message: 'Comment liked successfully', liked: true, notification });
   } catch (error) {
     console.error('Error liking comment:', error);
     res.status(500).json({ message: 'Internal server error', liked: false });
   }
 };
+
 
 exports.unlikeComment = async (req, res) => {
   const commentId = req.params.commentId;
@@ -1647,7 +1767,7 @@ exports.unlikeComment = async (req, res) => {
 };
 
 exports.likeSubComment = async (req, res) => {
-  const  subCommentId = req.params.commentId;
+  const subCommentId = req.params.commentId;
   const { userId } = req.body;
 
   try {
@@ -1666,13 +1786,30 @@ exports.likeSubComment = async (req, res) => {
     subComment.likeCount += 1;
     await subComment.save();
 
-    res.status(200).json({ message: 'Sub-comment liked successfully' });
+    // Retrieve the sub-comment owner details
+    const subCommentOwner = await User.findByPk(subComment.userId);
+    const liker = await User.findByPk(userId);
+
+    // Create a notification for the sub-comment owner
+    const notificationContent = `${liker.username} liked your sub-comment: ${subComment.content}`;
+    const notification = await Notification.create({
+      userId: subComment.userId,  // Notify the owner of the sub-comment
+      subCommentId,
+      type: 'like',
+      content: notificationContent,
+    });
+
+    // Emit event for new like notification only to the sub-comment owner
+    console.log('Emitting newLikeSubCommentNotification to user:', subComment.userId, notification);
+    req.io.to(`user_${subComment.userId}`).emit('newLikeSubCommentNotification', notification); // Emit to specific user
+
+    res.status(200).json({ message: 'Sub-comment liked successfully', notification });
   } catch (error) {
     console.error('Error liking sub-comment:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
-
 };
+
 exports.unlikeSubComment = async (req, res) => {
   const subCommentId = req.params.subCommentId; // Corrected parameter name
   const { userId } = req.body;
@@ -1712,13 +1849,26 @@ exports.followUser = async (req, res) => {
     const user = await User.findByPk(userId);
     const follower = await User.findByPk(followerId);
 
-	    if (!user || !follower) {
+    if (!user || !follower) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     await Follow.create({ followerId, followingId: userId });
 
-    res.status(201).json({ message: 'User followed successfully' });
+    // Create a notification for the followed user
+    const notificationContent = `${follower.username} started following you.`;
+    const notification = await Notification.create({
+      userId,  // Notify the followed user
+      followerId,
+      type: 'follow',
+      content: notificationContent,
+    });
+
+    // Emit event for new follow notification only to the followed user
+    console.log('Emitting newFollowNotification to user:', userId, notification);
+    req.io.to(`user_${userId}`).emit('newFollowNotification', notification); // Emit to specific user
+
+    res.status(201).json({ message: 'User followed successfully', notification });
   } catch (error) {
     console.error('Error following user:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -1739,7 +1889,20 @@ exports.unfollowUser = async (req, res) => {
 
     await follow.destroy();
 
-    res.status(200).json({ message: 'User unfollowed successfully' });
+    // Create a notification for the unfollowed user
+    const notificationContent = `${followerId} has unfollowed you.`;
+    const notification = await Notification.create({
+      userId,  // Notify the unfollowed user
+      followerId,
+      type: 'unfollow',
+      content: notificationContent,
+    });
+
+    // Emit event for new unfollow notification only to the unfollowed user
+    console.log('Emitting newUnfollowNotification to user:', userId, notification);
+    req.io.to(`user_${userId}`).emit('newUnfollowNotification', notification); // Emit to specific user
+
+    res.status(200).json({ message: 'User unfollowed successfully', notification });
   } catch (error) {
     console.error('Error unfollowing user:', error);
     res.status(500).json({ message: 'Internal server error' });
