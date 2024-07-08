@@ -11,6 +11,7 @@ const path = require('path');
 const Post = require('../models/Post');
 const PostLike = require('../models/PostLike');
 const Reel = require('../models/Reel');
+const Notification = require('../models/Notification');
 
 const Country = require('../models/Country');
 const State = require('../models/State');
@@ -1214,18 +1215,18 @@ exports.getAllMyParties = async (req, res) => {
   }
 };
 
-exports.createComment = async (req, res) => {
-  const { userId, postId, content } = req.body;
-console.log("----------testing-------------",req.body);
-  try {
-      const newComment = await Comment.create({ userId, postId, content });
-      res.status(201).json({ message: 'Comment created successfully', comment: newComment });
-  } catch (error) {
-      console.error('Error creating comment:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
-};
-/*
+// exports.createComment = async (req, res) => {
+//   const { userId, postId, content } = req.body;
+// console.log("----------testing-------------",req.body);
+//   try {
+//       const newComment = await Comment.create({ userId, postId, content });
+//       res.status(201).json({ message: 'Comment created successfully', comment: newComment });
+//   } catch (error) {
+//       console.error('Error creating comment:', error);
+//       res.status(500).json({ message: 'Internal server error' });
+//   }
+// };
+
 exports.createComment = async (req, res) => {
   const { userId, postId, content } = req.body;
   console.log("----------testing-------------", req.body);
@@ -1262,7 +1263,75 @@ exports.createComment = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-*/
+
+
+// exports.createComment = async (req, res) => {
+//   const { userId, postId, content } = req.body;
+//   console.log("----------testing-------------", req.body);
+  
+//   try {
+//     // Create the new comment
+//     const newComment = await Comment.create({ userId, postId, content });
+//     console.log("New comment created:", newComment);
+
+//     // Retrieve the post details to get the userId of the post owner
+//     const post = await Post.findByPk(postId);
+//     if (!post) {
+//       return res.status(404).json({ message: 'Post not found' });
+//     }
+
+//     // Retrieve the details of the user who made the comment
+//     const commenter = await UserDetails.findByPk(userId, {
+//       attributes: ['id', 'userName', 'userProfile']
+//     });
+//     if (!commenter) {
+//       return res.status(404).json({ message: 'Commenter not found' });
+//     }
+
+//     // Retrieve the details of the post owner
+//     const postOwner = await UserDetails.findByPk(post.userId, {
+//       attributes: ['id', 'userName', 'userProfile']
+//     });
+//     if (!postOwner) {
+//       return res.status(404).json({ message: 'Post owner not found' });
+//     }
+
+//     // Create a notification for the post owner
+//     const notificationContent = `${commenter.userName} mentioned you in a comment: ${content}`;
+//     const notification = await Notification.create({
+//       userId: post.userId,  // Notify the owner of the post
+//       postId,
+//       type: 'comment',
+//       content: notificationContent,
+//     });
+
+//     // Emit events to notify clients via Socket.io
+//     req.io.emit('newComment', { postId, userId, content });
+
+//     // Emit event for new notification only to the post owner
+//     const notificationDetails = {
+//       notification,
+//       commenterDetails: {
+//         userId: commenter.id,
+//         userName: commenter.userName,
+//         userProfile: commenter.userProfile
+//       },
+//       postOwnerDetails: {
+//         userId: postOwner.id,
+//         userName: postOwner.userName,
+//         userProfile: postOwner.userProfile
+//       }
+//     };
+//     console.log('Emitting newNotification to user:', post.userId, notificationDetails);
+//     req.io.to(`user_${post.userId}`).emit('newNotification', notificationDetails); // Emit to specific user
+
+//     res.status(201).json({ message: 'Comment created successfully', comment: newComment, notification });
+//   } catch (error) {
+//     console.error('Error creating comment:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// };
+
 
 exports.updateComment = async (req, res) => {
   const id = req.params.commentId;

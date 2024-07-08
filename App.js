@@ -106,8 +106,8 @@ app.use(fileUpload());
 app.use('/admin', adminRoutes);
 app.use('/user', userRoutes);
 
-const PORT = process.env.PORT || 2000;
-//const PORT = process.env.PORT || ( "0.0.0.0" , 2000) ;
+//const PORT = process.env.PORT || 2000;
+const PORT = process.env.PORT ||  2000 ;
 server.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
 
 
