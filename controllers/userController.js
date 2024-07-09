@@ -754,6 +754,7 @@ exports.getAllPost = async (req, res) => {
     const userDetails = await UserDetails.findAll({
       where: { userId: userIds },
     });
+    console.log("userDetails----------",userDetails[0].userName);
 
     // Step 4: Fetch all likes and comments for the posts
     const postLikes = await PostLike.findAll({
@@ -787,13 +788,13 @@ exports.getAllPost = async (req, res) => {
         tagUser: originalPost.tagUser,
         caption: originalPost.caption,
         userDetails: {
-          id: userDetail.userId,
-          userName: userDetail.userName,
-          email: userDetail.email,
-          userProfile: userDetail.userProfile,
-          location: userDetail.state,
-          createdAt: userDetail.createdAt,
-          updatedAt: userDetail.updatedAt,
+          id: userId,
+          userName: userDetails[0].userName,
+          email:  userDetails[0].email,
+          userProfile:  userDetails[0].userProfile,
+          location:  userDetails[0].state,
+          createdAt:  userDetails[0].createdAt,
+          updatedAt:  userDetails[0].updatedAt,
         }, // Include only updatedAt field
       };
     }));
@@ -1283,13 +1284,13 @@ exports.createSubComment = async (req, res) => {
     // Create a notification for the comment owner
     const notification = await Notification.create({
       userId: comment.userId,  // Notify the owner of the comment
-      commentId,
+      postId: comment.postId,
       type: 'sub-comment',
       content: subComment,
     });
 
     // Emit events to notify clients via Socket.io
-    req.io.emit('newSubComment', { commentId, userId, subComment });
+    //req.io.emit('newSubComment', { commentId, userId, subComment });
 
     // Emit event for new notification only to the comment owner
     console.log('Emitting newSubCommentNotification to user:', comment.userId, notification);
@@ -1697,10 +1698,13 @@ console.log("userId-------------------------",userId);
 exports.likeComment = async (req, res) => {
   const commentId = req.params.commentId;
   const { userId } = req.body;
-
+console.log("userId--------",userId)
+console.log("commentId-------",commentId);
   try {
     // Check if the user has already liked this comment
-    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
+    const existingLike = await CommentLike.findOne({ where: { commentId,userId } });
+    console.log("existingLike--------",existingLike);
+   
 
     if (existingLike) {
       return res.status(400).json({ message: 'User has already liked this comment', liked: false });
@@ -1711,6 +1715,9 @@ exports.likeComment = async (req, res) => {
 
     // Increment the like count
     const comment = await Comment.findByPk(commentId);
+    console.log("-----------------------",comment.userId);
+    console.log("---------------------",comment.content);
+    
     comment.likeCount += 1;
     await comment.save();
 
@@ -1722,12 +1729,14 @@ exports.likeComment = async (req, res) => {
     const notificationContent = `${liker.username} liked your comment: ${comment.content}`;
     const notification = await Notification.create({
       userId: comment.userId,  // Notify the owner of the comment
-      commentId,
-      type: 'like',
+      postId: comment.postId,
+      type: 'Comment like',
       content: notificationContent,
     });
-
+// const notification="The data like here";
+console.log("comment.userId--------",comment.userId);
     // Emit event for new like notification only to the comment owner
+    // req.io.emit('newCommentLike', { postId, userId, notificationContent });
     console.log('Emitting newLikeNotification to user:', comment.userId, notification);
     req.io.to(`user_${comment.userId}`).emit('newCommentLikeNotification', notification); // Emit to specific user
 
@@ -1785,22 +1794,24 @@ exports.likeSubComment = async (req, res) => {
     const subComment = await SubComment.findByPk(subCommentId);
     subComment.likeCount += 1;
     await subComment.save();
+const commentId=subComment.commentId;
+const comment= await Comment.findByPk(commentId);
 
+// return
     // Retrieve the sub-comment owner details
     const subCommentOwner = await User.findByPk(subComment.userId);
     const liker = await User.findByPk(userId);
 
     // Create a notification for the sub-comment owner
-    const notificationContent = `${liker.username} liked your sub-comment: ${subComment.content}`;
+    const notificationContent = `${liker.fullName} liked your sub-comment: ${subComment.subComment}`;
     const notification = await Notification.create({
       userId: subComment.userId,  // Notify the owner of the sub-comment
-      subCommentId,
+      postId:comment.postId,
       type: 'like',
       content: notificationContent,
     });
-
     // Emit event for new like notification only to the sub-comment owner
-    console.log('Emitting newLikeSubCommentNotification to user:', subComment.userId, notification);
+    //console.log('Emitting newLikeSubCommentNotification to user:', subComment.userId, notification);
     req.io.to(`user_${subComment.userId}`).emit('newLikeSubCommentNotification', notification); // Emit to specific user
 
     res.status(200).json({ message: 'Sub-comment liked successfully', notification });
@@ -1847,7 +1858,13 @@ exports.followUser = async (req, res) => {
 
   try {
     const user = await User.findByPk(userId);
-    const follower = await User.findByPk(followerId);
+    const follower = await UserDetails.findAll({where:{userId:followerId}});
+
+    console.log("follower-----------",follower);
+    // return
+    
+    console.log("follower.userName-----------",follower[0].userName);
+    
 
     if (!user || !follower) {
       return res.status(404).json({ message: 'User not found' });
@@ -1856,11 +1873,11 @@ exports.followUser = async (req, res) => {
     await Follow.create({ followerId, followingId: userId });
 
     // Create a notification for the followed user
-    const notificationContent = `${follower.username} started following you.`;
+    const notificationContent = `${follower[0].userName} started following you.`;
     const notification = await Notification.create({
       userId,  // Notify the followed user
-      followerId,
-      type: 'follow',
+      postId:0,
+      type: 'following',
       content: notificationContent,
     });
 
@@ -1889,20 +1906,7 @@ exports.unfollowUser = async (req, res) => {
 
     await follow.destroy();
 
-    // Create a notification for the unfollowed user
-    const notificationContent = `${followerId} has unfollowed you.`;
-    const notification = await Notification.create({
-      userId,  // Notify the unfollowed user
-      followerId,
-      type: 'unfollow',
-      content: notificationContent,
-    });
-
-    // Emit event for new unfollow notification only to the unfollowed user
-    console.log('Emitting newUnfollowNotification to user:', userId, notification);
-    req.io.to(`user_${userId}`).emit('newUnfollowNotification', notification); // Emit to specific user
-
-    res.status(200).json({ message: 'User unfollowed successfully', notification });
+    res.status(200).json({ message: 'User unfollowed successfully' });
   } catch (error) {
     console.error('Error unfollowing user:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -2057,47 +2061,66 @@ exports.likeUnlikePost = async (req, res) => {
   const { userId } = req.body;
 
   try {
-      // Check if the user has already liked the post
-      const existingLike = await PostLike.findOne({
-          where: {
-              postId,
-              userId
-          }
-      });
-      if (existingLike) {
-          // Unlike the post if already liked
-          await PostLike.destroy({
-              where: {
-                  postId,
-                  userId
-              }
-          });
-
-          // Decrease likeCount in Post table
-          await Post.decrement('likeCount', {
-              where: { id: postId },
-              by: 1
-          });
-
-          res.status(200).json({ message: 'Post unliked successfully' });
-      } else {
-          // Like the post if not already liked
-          await PostLike.create({
-              postId,
-              userId
-          });
-
-          // Increase likeCount in Post table
-          await Post.increment('likeCount', {
-              where: { id: postId },
-              by: 1
-          });
-
-          res.status(201).json({ message: 'Post liked successfully' });
+    // Check if the user has already liked the post
+    const existingLike = await PostLike.findOne({
+      where: {
+        postId,
+        userId
       }
+    });
+    
+    if (existingLike) {
+      // Unlike the post if already liked
+      await PostLike.destroy({
+        where: {
+          postId,
+          userId
+        }
+      });
+
+      // Decrease likeCount in Post table
+      await Post.decrement('likeCount', {
+        where: { id: postId },
+        by: 1
+      });
+
+      res.status(200).json({ message: 'Post unliked successfully' });
+    } else {
+      // Like the post if not already liked
+      await PostLike.create({
+        postId,
+        userId
+      });
+
+      // Increase likeCount in Post table
+      await Post.increment('likeCount', {
+        where: { id: postId },
+        by: 1
+      });
+
+      // Fetch post to get the userId of the post owner
+      const post = await Post.findByPk(postId);
+
+      if (post) {
+        // Create a notification (mocked for this example)
+        const notification = {
+          userId: post.userId,  // Notify the owner of the post
+          postId,
+          type: 'like',
+          content: `${userId} liked your post`
+        };
+
+        //req.io.emit('existingLike', { postId, userId });
+
+        // Emit notification to the post owner
+        req.io.to(`user_${post.userId}`).emit('postLikeNotification', notification);
+      }
+
+      res.status(201).json({ message: 'Post liked successfully' });
+    }
   } catch (error) {
-      console.error('Error liking/unliking post:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error liking/unliking post:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
