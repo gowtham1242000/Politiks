@@ -1228,6 +1228,7 @@ exports.getAllMyParties = async (req, res) => {
 // };
 
 exports.createComment = async (req, res) => {
+//return
   const { userId, postId, content } = req.body;
   console.log("----------testing-------------", req.body);
   
@@ -1251,11 +1252,11 @@ exports.createComment = async (req, res) => {
     });
 
     // Emit events to notify clients via Socket.io
-    req.io.emit('newComment', { postId, userId, content });
+    //req.io.emit('newComment', { postId, userId, content });
 
     // Emit event for new notification only to the post owner
     console.log('Emitting newNotification to user:', post.userId, notification);
-    req.io.to(`user_${post.userId}`).emit('newNotification', notification); // Emit to specific user
+    req.io.to(`user_${post.userId}`).emit('newCommentNotification', notification); // Emit to specific user
 
     res.status(201).json({ message: 'Comment created successfully', comment: newComment, notification });
   } catch (error) {
@@ -1577,7 +1578,7 @@ console.log("userId-------------------------",userId);
   }
 };
 
-
+/*
   exports.createSubComment = async (req, res) => {
     const { userId, commentId, subComment } = req.body;
 
@@ -1590,8 +1591,46 @@ console.log("userId-------------------------",userId);
         res.status(500).json({ message: 'Internal server error' });
     }
   };
+*/
 
+exports.createSubComment = async (req, res) => {
+  const { userId, commentId, subComment } = req.body;
+  console.log("----------testing-------------", req.body);
+  
+  try {
+    // Create the new sub-comment
+    const newSubComment = await SubComment.create({ userId, commentId, subComment });
+    console.log("New sub-comment created:", newSubComment);
 
+    // Retrieve the comment details to get the userId of the comment owner
+    const comment = await Comment.findByPk(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    // Create a notification for the comment owner
+    const notification = await Notification.create({
+      userId: comment.userId,  // Notify the owner of the comment
+      postId: comment.postId,
+      type: 'sub-comment',
+      content: subComment,
+    });
+
+    // Emit events to notify clients via Socket.io
+    //req.io.emit('newSubComment', { commentId, userId, subComment });
+
+    // Emit event for new notification only to the comment owner
+    console.log('Emitting newSubCommentNotification to user:', comment.userId, notification);
+    req.io.to(`user_${comment.userId}`).emit('newSubCommentNotification', notification); // Emit to specific user
+
+    res.status(201).json({ message: 'Sub-comment created successfully', subComment: newSubComment, notification });
+  } catch (error) {
+    console.error('Error creating sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/*
 exports.likeComment = async (req, res) => {
   const commentId = req.params.commentId;
   const { userId } = req.body;
@@ -1618,6 +1657,60 @@ exports.likeComment = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', liked: false });
   }
 };
+*/
+exports.likeComment = async (req, res) => {
+  const commentId = req.params.commentId;
+  const { userId } = req.body;
+console.log("userId--------",userId)
+console.log("commentId-------",commentId);
+  try {
+    // Check if the user has already liked this comment
+    const existingLike = await CommentLike.findOne({ where: { commentId,userId } });
+    console.log("existingLike--------",existingLike);
+   
+
+    if (existingLike) {
+      return res.status(400).json({ message: 'User has already liked this comment', liked: false });
+    }
+
+    // Create a new like entry
+    await CommentLike.create({ commentId, userId });
+
+    // Increment the like count
+    const comment = await Comment.findByPk(commentId);
+    console.log("-----------------------",comment.userId);
+    console.log("---------------------",comment.content);
+    
+    comment.likeCount += 1;
+    await comment.save();
+
+    // Retrieve the comment owner details
+    const commentOwner = await User.findByPk(comment.userId);
+    const liker = await User.findByPk(userId);
+
+    // Create a notification for the comment owner
+    const notificationContent = `${liker.username} liked your comment: ${comment.content}`;
+    const notification = await Notification.create({
+      userId: comment.userId,  // Notify the owner of the comment
+      postId: comment.postId,
+      type: 'Comment like',
+      content: notificationContent,
+    });
+// const notification="The data like here";
+console.log("comment.userId--------",comment.userId);
+    // Emit event for new like notification only to the comment owner
+    // req.io.emit('newCommentLike', { postId, userId, notificationContent });
+    console.log('Emitting newLikeNotification to user:', comment.userId, notification);
+    req.io.to(`user_${comment.userId}`).emit('newCommentLikeNotification', notification); // Emit to specific user
+
+    res.status(200).json({ message: 'Comment liked successfully', liked: true, notification });
+  } catch (error) {
+    console.error('Error liking comment:', error);
+    res.status(500).json({ message: 'Internal server error', liked: false });
+  }
+};
+
+
 
 exports.unlikeComment = async (req, res) => {
   const commentId = req.params.commentId;
@@ -1645,7 +1738,7 @@ exports.unlikeComment = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', unliked: false });
   }
 };
-
+/*
 exports.likeSubComment = async (req, res) => {
   const  subCommentId = req.params.commentId;
   const { userId } = req.body;
@@ -1672,7 +1765,54 @@ exports.likeSubComment = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 
+};*/
+exports.likeSubComment = async (req, res) => {
+  const subCommentId = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the user has already liked this sub-comment
+    const existingLike = await SubCommentLike.findOne({ where: { subCommentId, userId } });
+
+    if (existingLike) {
+      return res.status(400).json({ message: 'User has already liked this sub-comment' });
+    }
+
+    // Create a new like entry
+    await SubCommentLike.create({ subCommentId, userId });
+
+    // Increment the like count
+    const subComment = await SubComment.findByPk(subCommentId);
+    subComment.likeCount += 1;
+    await subComment.save();
+const commentId=subComment.commentId;
+const comment= await Comment.findByPk(commentId);
+
+// return
+    // Retrieve the sub-comment owner details
+    const subCommentOwner = await User.findByPk(subComment.userId);
+    const liker = await User.findByPk(userId);
+
+    // Create a notification for the sub-comment owner
+    const notificationContent = `${liker.fullName} liked your sub-comment: ${subComment.subComment}`;
+    const notification = await Notification.create({
+      userId: subComment.userId,  // Notify the owner of the sub-comment
+      postId:comment.postId,
+      type: 'like',
+      content: notificationContent,
+    });
+    // Emit event for new like notification only to the sub-comment owner
+    //console.log('Emitting newLikeSubCommentNotification to user:', subComment.userId, notification);
+    req.io.to(`user_${subComment.userId}`).emit('newLikeSubCommentNotification', notification); // Emit to specific user
+
+    res.status(200).json({ message: 'Sub-comment liked successfully', notification });
+  } catch (error) {
+    console.error('Error liking sub-comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
+
+
 exports.unlikeSubComment = async (req, res) => {
   const subCommentId = req.params.subCommentId; // Corrected parameter name
   const { userId } = req.body;
@@ -1703,7 +1843,7 @@ console.log("req.body------------------",req.body);
   }
 };
 
-
+/*
 exports.followUser = async (req, res) => {
   const userId = req.params.userId;
   const { followerId } = req.body;
@@ -1719,6 +1859,89 @@ exports.followUser = async (req, res) => {
     await Follow.create({ followerId, followingId: userId });
 
     res.status(201).json({ message: 'User followed successfully' });
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+
+/*
+exports.followUser = async (req, res) => {
+  const userId = req.params.userId;
+  const { followerId } = req.body;
+console.log("req.body-----------",req.body)
+  try {
+    const user = await User.findByPk(userId);
+    const follower = await UserDetails.findAll({where:{userId:followerId}});
+
+    console.log("follower-----------",follower);
+    // return
+    
+    console.log("follower.userName-----------",follower[0].userName);
+    
+
+    if (!user || !follower) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await Follow.create({ followerId, followingId: userId });
+
+    // Create a notification for the followed user
+    const notificationContent = `${follower[0].userName} started following you.`;
+    const notification = await Notification.create({
+      userId,  // Notify the followed user
+      postId:0,
+      type: 'following',
+      content: notificationContent,
+    });
+
+    // Emit event for new follow notification only to the followed user
+    console.log('Emitting newFollowNotification to user:', userId, notification);
+    req.io.to(`user_${userId}`).emit('newFollowNotification', notification); // Emit to specific user
+
+    res.status(201).json({ message: 'User followed successfully', notification });
+console.log("notification-------------",notification)
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+exports.followUser = async (req, res) => {
+  const userId = req.params.userId;
+  const { followerId } = req.body;
+
+  try {
+    const user = await User.findByPk(userId);
+    const follower = await UserDetails.findOne({ where: { userId: followerId } });
+
+    if (!user || !follower) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if the follow relationship already exists
+    const existingFollow = await Follow.findOne({ where: { followerId, followingId: userId } });
+
+    if (existingFollow) {
+      return res.status(400).json({ message: 'User is already followed' });
+    }
+
+    await Follow.create({ followerId, followingId: userId });
+
+    // Create a notification for the followed user
+    const notificationContent = `${follower.userName} started following you.`;
+    const notification = await Notification.create({
+      userId,  // Notify the followed user
+      postId: 0,
+      type: 'following',
+      content: notificationContent,
+    });
+
+    // Emit event for new follow notification only to the followed user
+    req.io.to(`user_${userId}`).emit('newFollowNotification', notification); // Emit to specific user
+
+    res.status(201).json({ message: 'User followed successfully', notification });
   } catch (error) {
     console.error('Error following user:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -1779,16 +2002,16 @@ exports.getFollowers = async (req, res) => {
 
 exports.getFollowing = async (req, res) => {
   const userId = req.params.userId;
-
+console.log("userId-------------",userId)
   try {
     // Fetch all followings
     const followings = await Follow.findAll({ where: { followerId: userId } });
-
+console.log("following count--------------",followings.length)
     // Map to extract following IDs
     const followingIds = followings.map(follow => follow.followingId);
-
+console.log("followingIds------------------",followingIds);
     // Fetch details of all users being followed
-    const followingDetails = await UserDetails.findAll({ where: { userId: followingIds } });
+    const followingDetails = await UserDetails.findAll({ where: { id: followingIds } });
 
     // Get the count of followings
     const followingCount = followingDetails.length;
@@ -1802,7 +2025,7 @@ exports.getFollowing = async (req, res) => {
     });
 
     res.status(200).json({
-      count: followingCount,
+      count: followings.length,
       followings: followingList
     });
   } catch (error) {
@@ -1811,6 +2034,7 @@ exports.getFollowing = async (req, res) => {
   }
 };
 
+/*
 exports.suggestions = async (req, res) => {
   const { userId } = req.params;
 
@@ -1863,10 +2087,97 @@ exports.suggestions = async (req, res) => {
         const userDetails = await UserDetails.findOne({
           where: { userId: user.id }
         });
+        const isFollowing = await Follow.findOne({ where: { followerId: userId, followingId: user.id } });
         return {
           ...user.toJSON(),
           followerCount,
-          userDetails
+          userDetails,
+          userFollowing: !!isFollowing // Convert to boolean
+        };
+      }));
+      return usersWithDetails;
+    };
+
+    const newUsersWithDetails = await fetchUserDetailsAndFollowerCount(newUsers);
+    const locationUsersWithDetails = await fetchUserDetailsAndFollowerCount(locationUsers);
+
+    // Combine both results
+    const suggestions = {
+      newUsers: newUsersWithDetails,
+      locationUsers: locationUsersWithDetails
+    };
+
+    res.status(200).json(suggestions);
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+*/
+
+
+exports.suggestions = async (req, res) => {
+  const { userId } = req.params;
+console.log("userId--------------",userId)
+  try {
+    // Fetch the user details by userId to get the state
+    const userDetails = await UserDetails.findOne({
+      where: { userId },
+      attributes: ['state']
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User details not found' });
+    }
+
+    const location = userDetails.state;
+
+    // Fetch newly joined users
+    const newUsers = await User.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    // Fetch location-based users
+    let locationUsers = [];
+    if (location) {
+      const locationUserDetails = await UserDetails.findAll({
+        where: { state: location },
+        attributes: ['userId']
+      });
+
+      const locationUserIds = locationUserDetails.map(detail => detail.userId);
+
+      locationUsers = await User.findAll({
+        where: {
+          id: locationUserIds
+        },
+        order: [['createdAt', 'DESC']],
+        limit: 10
+      });
+    }
+
+    // Fetch follower counts and user details for new users and location-based users
+    const fetchUserDetailsAndFollowerCount = async (users) => {
+      const usersWithDetails = await Promise.all(users.map(async user => {
+        const followerCount = await Follow.count({ where: { followingId: user.id } });
+        const userDetails = await UserDetails.findOne({
+          where: { userId: user.id }
+        });
+
+        // Check if the current user is following this user
+        const isFollowing = await Follow.findOne({ 
+          where: { 
+            followerId: user.id,
+            followingId: userId
+          } 
+        });
+
+        return {
+          ...user.toJSON(),
+          followerCount,
+          userDetails,
+          following: !!isFollowing // Convert to boolean
         };
       }));
       return usersWithDetails;
@@ -1888,7 +2199,7 @@ exports.suggestions = async (req, res) => {
   }
 };
 
-
+/*
 exports.likeUnlikePost = async (req, res) => {
   const postId = req.params.postId;
   const { userId } = req.body;
@@ -1937,6 +2248,76 @@ exports.likeUnlikePost = async (req, res) => {
       res.status(500).json({ message: 'Internal server error' });
   }
 };
+*/
+
+exports.likeUnlikePost = async (req, res) => {
+  const postId = req.params.postId;
+  const { userId } = req.body;
+console.log("userId------------",userId)
+  try {
+    // Check if the user has already liked the post
+    const existingLike = await PostLike.findOne({
+      where: {
+        postId,
+        userId
+      }
+    });
+    
+    if (existingLike) {
+      // Unlike the post if already liked
+      await PostLike.destroy({
+        where: {
+          postId,
+          userId
+        }
+      });
+
+      // Decrease likeCount in Post table
+      await Post.decrement('likeCount', {
+        where: { id: postId },
+        by: 1
+      });
+
+      res.status(200).json({ message: 'Post unliked successfully' });
+    } else {
+      // Like the post if not already liked
+      await PostLike.create({
+        postId,
+        userId
+      });
+
+      // Increase likeCount in Post table
+      await Post.increment('likeCount', {
+        where: { id: postId },
+        by: 1
+      });
+
+      // Fetch post to get the userId of the post owner
+      const post = await Post.findByPk(postId);
+
+      if (post) {
+        // Create a notification (mocked for this example)
+        const notification = {
+          userId: post.userId,  // Notify the owner of the post
+          postId,
+          type: 'like',
+          content: `${userId} liked your post`
+        };
+
+        //req.io.emit('existingLike', { postId, userId });
+
+        // Emit notification to the post owner
+        req.io.to(`user_${post.userId}`).emit('postLikeNotification', notification);
+      }
+
+      res.status(201).json({ message: 'Post liked successfully' });
+    }
+  } catch (error) {
+    console.error('Error liking/unliking post:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 
 exports.likedUserList = async(req,res)=>{
   const postId = req.params.postId;
