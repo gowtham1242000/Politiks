@@ -1,60 +1,50 @@
+
 const express = require('express');
 const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const server = require('http').createServer(app); // Create HTTP server using Express app
+const io = require('socket.io')(server); // Include socket.io
 const bodyParser = require('body-parser');
 const fileUpload = require('express-fileupload');
 const session = require('express-session');
 const db = require('./config/config');
 const adminRoutes = require('./routes/adminRoutes');
 const userRoutes = require('./routes/userRoutes');
+const { Op } = require('sequelize');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const sequelize = require('./config/config')
 
-// io.on('connection', (socket) => {
-//   console.log('New client connected');
+// Middleware setup
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-//   socket.on('disconnect', () => {
-//     console.log('Client disconnected');
-//   });
+//const protectedRoutes = require('./routes/protectedRoutes'); // Add this line
+require('dotenv').config();
+// require('dotenv').config();
 
-//   socket.on('register', (userId) => {
-//     console.log(`User ${userId} registered with socket ID ${socket.id}`);
-//     socket.join(`user_${userId}`);
-//   });
+// Connect to the database
+db.authenticate()
+  .then(() => console.log('Database connected'))
+  .catch(err => console.error('Database connection error:', err));
 
-//   socket.on('newCommentNotification', (notification) => {
-//     console.log('Received new comment notification:', notification);
-//     io.emit('newCommentNotification', notification); // Example: Broadcast new comment notification to all clients
-//   });
+//   sequelize.sync({ force: true }).then(() => {
+//     console.log("Database & tables created!");
+//   })
 
-//   socket.on('newSubCommentNotification', (notification) => {
-//     console.log('Received new sub-comment notification:', notification);
-//     io.emit('newSubCommentNotification', notification); // Example: Broadcast new sub-comment notification to all clients
-//   });
-//   socket.on('newCommentLikeNotification', (notification) => {
-//     console.log('Received new like notification:', notification);
-//     io.emit('newLikeNotification', notification); // Example: Broadcast new like notification to all clients
-//   });
-//   socket.on('newLikeSubCommentNotification', (notification) => {
-//     console.log('Received new like sub-comment notification:', notification);
-//     io.emit('newLikeSubCommentNotification', notification); // Example: Broadcast new like sub-comment notification to all clients
-//   });
-//   socket.on('newFollowNotification', (notification) => {
-//     console.log('Received new follow notification:', notification);
-//     io.emit('newFollowNotification', notification); // Example: Broadcast new follow notification to all clients
-//   });
-//   socket.on('newUnfollowNotification', (notification) => {
-//     console.log('Received new unfollow notification:', notification);
-//     io.emit('newUnfollowNotification', notification); // Example: Broadcast new unfollow notification to all clients
-//   });
-//   socket.on('PostLikeNotification', (notification) => {
-//     console.log('Received new notification:', notification);
-//     io.emit('PostLikeNotification', notification);
-//     // Handle new notification logic if necessary
-//     // This can be used if you want to broadcast to all clients
-//   });
-// });
+// Middleware
+app.use(express.json());
+app.use(session({
+    secret: '9e880f4a-7dc5-11ec-b9b5-0200cd936042',
+    resave: false,
+    saveUninitialized: true
+}));
+app.use(bodyParser.json());
+app.use(fileUpload());
+app.use('/admin', adminRoutes);
+app.use('/user', userRoutes);
 
+//app.use('/protected', protectedRoutes);
 io.on('connection', (socket) => {
   console.log('New client connected', socket.id);
 
@@ -105,7 +95,7 @@ io.to(`user_${notification.userId}`).emit('postLikeNotification', notification);
   //   io.emit('newUnfollowNotification', notification);
   // });
 
-  
+
 });
 
 
@@ -114,13 +104,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(fileUpload());
-app.use('/admin', adminRoutes);
-app.use('/user', userRoutes);
 
-// const PORT = process.env.PORT || 2000;
-const PORT = process.env.PORT || ( "0.0.0.0" , 2000) ;
+// Start the server
+const PORT = process.env.PORT || 2000;
 server.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
