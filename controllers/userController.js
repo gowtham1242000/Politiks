@@ -18,7 +18,7 @@ const State = require('../models/State');
 const MyParty = require('../models/MyParty');
 const Comment = require('../models/Comment');
 const SubComment = require('../models/SubComment');
-
+//const Notification = require('../models/Notification');
 const CommentLike = require('../models/CommentLike');
 const SubCommentLike = require('../models/SubCommentLike');
 
@@ -1232,7 +1232,7 @@ exports.createComment = async (req, res) => {
   const { userId, postId, content } = req.body;
   console.log("----------testing-------------", req.body);
   
-  try {
+/*  try {
     // Create the new comment
     const newComment = await Comment.create({ userId, postId, content });
     console.log("New comment created:", newComment);
@@ -1262,7 +1262,68 @@ exports.createComment = async (req, res) => {
   } catch (error) {
     console.error('Error creating comment:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }*/
+try {
+    // Create the new comment
+    const newComment = await Comment.create({ userId, postId, content });
+    console.log("New comment created:", newComment);
+
+    // Retrieve the post details to get the userId of the post owner
+    const post = await Post.findByPk(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Retrieve the user details to get the userName and userProfile
+    const user = await UserDetails.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Assign a dummy image URL if userProfile is null
+    const userProfile = user.userProfile || 'https://i.postimg.cc/nc820Kz7/anandupic.png';
+
+    // Format the notification content
+    const formattedContent = `${user.userName} commented on your flare: ${content}. Thanks for the support`;
+
+    // Determine the post image URL to use in the notification
+    let postUrl = null; // Initialize postUrl
+    if (Array.isArray(post.image) && post.image.length > 0) {
+      postUrl = post.images[0]; // Use the first image URL from the array
+    } else if (typeof post.image === 'string' && post.image !== '') {
+      try {
+        const parsedImages = JSON.parse(post.image);
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          postUrl = parsedImages[0]; // Use the first image URL from the parsed array
+        } else if (typeof parsedImages === 'string' && parsedImages !== '') {
+          postUrl = parsedImages; // Use the parsed string as the URL
+        }
+      } catch (error) {
+        console.error('Error parsing post images:', error);
+        return res.status(500).json({ message: 'Error parsing post images' });
+      }
+    }
+console.log("postUrl----------",postUrl);
+    // Create a notification for the post owner
+    const notification = await Notification.create({
+      userId: post.userId,  // Notify the owner of the post
+      postId,
+      type: 'comment',
+      content: formattedContent,
+      userProfile: userProfile,
+      post: postUrl,  // Use the determined post URL, can be null if not found
+    });
+
+    // Emit events to notify clients via Socket.io
+    console.log('Emitting newNotification to user:', post.userId, notification);
+    req.io.to(`user_${post.userId}`).emit('newCommentNotification', notification); // Emit to specific user
+
+    res.status(201).json({ message: 'Comment created successfully', comment: newComment, notification });
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
+
 };
 
 
@@ -1607,13 +1668,38 @@ exports.createSubComment = async (req, res) => {
     if (!comment) {
       return res.status(404).json({ message: 'Comment not found' });
     }
-
+    const post = await Post.findByPk(comment.postId);
+console.log("post----------------",post);
+    const user = await UserDetails.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const userProfile = user.userProfile || 'https://i.postimg.cc/nc820Kz7/anandupic.png';
+    const formattedContent = `${user.userName} commented on your flare. Thanks for the support`;
+    let postUrl = null; // Initialize postUrl
+    if (Array.isArray(post.image) && post.image.length > 0) {
+      postUrl = post.image[0]; // Use the first image URL from the array
+    } else if (typeof post.image === 'string' && post.image !== '') {
+      try {
+        const parsedImages = JSON.parse(post.image);
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          postUrl = parsedImages[0]; // Use the first image URL from the parsed array
+        } else if (typeof parsedImages === 'string' && parsedImages !== '') {
+          postUrl = parsedImages; // Use the parsed string as the URL
+        }
+      } catch (error) {
+        console.error('Error parsing post images:', error);
+        return res.status(500).json({ message: 'Error parsing post images' });
+      }
+    }
     // Create a notification for the comment owner
     const notification = await Notification.create({
       userId: comment.userId,  // Notify the owner of the comment
       postId: comment.postId,
       type: 'sub-comment',
-      content: subComment,
+      content: formattedContent,
+      userProfile: userProfile,
+      post: postUrl,
     });
 
     // Emit events to notify clients via Socket.io
@@ -1658,6 +1744,8 @@ exports.likeComment = async (req, res) => {
   }
 };
 */
+
+/*
 exports.likeComment = async (req, res) => {
   const commentId = req.params.commentId;
   const { userId } = req.body;
@@ -1686,10 +1774,10 @@ console.log("commentId-------",commentId);
 
     // Retrieve the comment owner details
     const commentOwner = await User.findByPk(comment.userId);
-    const liker = await User.findByPk(userId);
+    const liker = await UserDetail.findByPk(userId);
 
     // Create a notification for the comment owner
-    const notificationContent = `${liker.username} liked your comment: ${comment.content}`;
+    const notificationContent = `${liker.userName} liked your comment: ${comment.content}`;
     const notification = await Notification.create({
       userId: comment.userId,  // Notify the owner of the comment
       postId: comment.postId,
@@ -1709,7 +1797,75 @@ console.log("comment.userId--------",comment.userId);
     res.status(500).json({ message: 'Internal server error', liked: false });
   }
 };
+*/
 
+exports.likeComment = async (req, res) => {
+  const commentId = req.params.commentId;
+  const { userId } = req.body;
+
+  try {
+    // Check if the user has already liked this comment
+    const existingLike = await CommentLike.findOne({ where: { commentId, userId } });
+
+    if (existingLike) {
+      return res.status(400).json({ message: 'User has already liked this comment', liked: false });
+    }
+
+    // Create a new like entry
+    await CommentLike.create({ commentId, userId });
+
+    // Increment the like count
+    const comment = await Comment.findByPk(commentId);
+    comment.likeCount += 1;
+    await comment.save();
+console.log("comment-----------",comment);
+
+    // Retrieve the comment owner details
+    const commentOwner = await User.findByPk(comment.userId);
+    const liker = await UserDetails.findByPk(userId);
+console.log("comment.post---------",comment.postId)
+    // Retrieve the associated post details
+    const post = await Post.findByPk(comment.postId);
+console.log("post----------",post.image);
+    // Create a notification for the comment owner
+    const notificationContent = `${liker.userName} liked your comment: ${comment.content}`;
+    const userProfile = commentOwner.userProfile || 'https://i.postimg.cc/nc820Kz7/anandupic.png';
+
+let postUrl = null; // Initialize postUrl
+    if (Array.isArray(post.image) && post.image.length > 0) {
+      postUrl = post.images[0]; // Use the first image URL from the array
+    } else if (typeof post.image === 'string' && post.image !== '') {
+      try {
+        const parsedImages = JSON.parse(post.image);
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          postUrl = parsedImages[0]; // Use the first image URL from the parsed array
+        } else if (typeof parsedImages === 'string' && parsedImages !== '') {
+          postUrl = parsedImages; // Use the parsed string as the URL
+        }
+      } catch (error) {
+        console.error('Error parsing post images:', error);
+        return res.status(500).json({ message: 'Error parsing post images' });
+      }
+    }
+    const notification = await Notification.create({
+      userId: comment.userId,  // Notify the owner of the comment
+      postId: comment.postId,
+      type: 'Comment like',
+      content: notificationContent,
+      userProfile: userProfile,
+      post: postUrl,
+    });
+
+    // Emit event for new like notification only to the comment owner
+    console.log('Emitting newLikeNotification to user:', comment.userId, notification);
+    req.io.to(`user_${comment.userId}`).emit('newCommentLikeNotification', notification); // Emit to specific user
+
+    res.status(200).json({ message: 'Comment liked successfully', liked: true, notification });
+  } catch (error) {
+    console.error('Error liking comment:', error);
+    res.status(500).json({ message: 'Internal server error', liked: false });
+  }
+};
 
 
 exports.unlikeComment = async (req, res) => {
@@ -1788,6 +1944,37 @@ exports.likeSubComment = async (req, res) => {
 const commentId=subComment.commentId;
 const comment= await Comment.findByPk(commentId);
 
+
+const user = await UserDetails.findByPk(userId);
+const userProfile = user.userProfile || 'https://i.postimg.cc/nc820Kz7/anandupic.png';
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+    const post = await Post.findByPk(comment.postId);
+console.log("post----------------",post);
+//    const user = await UserDetails.findByPk(userId);
+  //  if (!user) {
+    //  return res.status(404).json({ message: 'User not found' });
+    //}
+//    const userProfile = user.userProfile || 'https://i.postimg.cc/nc820Kz7/anandupic.png';
+    const formattedContent = `${user.userName} commented on your flare. Thanks for the support`;
+    let postUrl = null; // Initialize postUrl
+    if (Array.isArray(post.image) && post.image.length > 0) {
+      postUrl = post.image[0]; // Use the first image URL from the array
+    } else if (typeof post.image === 'string' && post.image !== '') {
+      try {
+        const parsedImages = JSON.parse(post.image);
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          postUrl = parsedImages[0]; // Use the first image URL from the parsed array
+        } else if (typeof parsedImages === 'string' && parsedImages !== '') {
+          postUrl = parsedImages; // Use the parsed string as the URL
+        }
+      } catch (error) {
+        console.error('Error parsing post images:', error);
+        return res.status(500).json({ message: 'Error parsing post images' });
+      }
+    }
+
 // return
     // Retrieve the sub-comment owner details
     const subCommentOwner = await User.findByPk(subComment.userId);
@@ -1800,6 +1987,8 @@ const comment= await Comment.findByPk(commentId);
       postId:comment.postId,
       type: 'like',
       content: notificationContent,
+      userProfile: userProfile,
+      post: postUrl,
     });
     // Emit event for new like notification only to the sub-comment owner
     //console.log('Emitting newLikeSubCommentNotification to user:', subComment.userId, notification);
@@ -1928,7 +2117,8 @@ exports.followUser = async (req, res) => {
     }
 
     await Follow.create({ followerId, followingId: userId });
-
+const postUrl =  await UserDetails.findOne({where:{userId:followerId}})
+const userProfile =await UserDetails.findOne({where:{userId}})
     // Create a notification for the followed user
     const notificationContent = `${follower.userName} started following you.`;
     const notification = await Notification.create({
@@ -1936,10 +2126,12 @@ exports.followUser = async (req, res) => {
       postId: 0,
       type: 'following',
       content: notificationContent,
+      userProfile: userProfile.userProfile,
+      post: postUrl.userProfile,
     });
 
     // Emit event for new follow notification only to the followed user
-    req.io.to(`user_${userId}`).emit('newFollowNotification', notification); // Emit to specific user
+    req.io.to(`user_${followerId}`).emit('newFollowNotification', notification); // Emit to specific user
 
     res.status(201).json({ message: 'User followed successfully', notification });
   } catch (error) {
@@ -2294,14 +2486,35 @@ console.log("userId------------",userId)
 
       // Fetch post to get the userId of the post owner
       const post = await Post.findByPk(postId);
+const user = await UserDetails.findByPk(userId);
+const userProfile = user.userProfile || 'https://i.postimg.cc/nc820Kz7/anandupic.png';
 
+      let postUrl = null; // Initialize postUrl
+    if (Array.isArray(post.image) && post.image.length > 0) {
+      postUrl = post.images[0]; // Use the first image URL from the array
+    } else if (typeof post.image === 'string' && post.image !== '') {
+      try {
+        const parsedImages = JSON.parse(post.image);
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          postUrl = parsedImages[0]; // Use the first image URL from the parsed array
+        } else if (typeof parsedImages === 'string' && parsedImages !== '') {
+          postUrl = parsedImages; // Use the parsed string as the URL
+        }
+      } catch (error) {
+        console.error('Error parsing post images:', error);
+        return res.status(500).json({ message: 'Error parsing post images' });
+      }
+    }
       if (post) {
+const formattedContent = `${user.userName} liked your Photo.`;
         // Create a notification (mocked for this example)
         const notification = {
           userId: post.userId,  // Notify the owner of the post
           postId,
           type: 'like',
-          content: `${userId} liked your post`
+          content: formattedContent,
+          post: postUrl,
+          userProfile: userProfile
         };
 
         //req.io.emit('existingLike', { postId, userId });
@@ -2673,3 +2886,24 @@ exports.searchUsers = async (req, res) => {
   }
 };
 
+
+
+exports.getNotifications = async (req, res) => {
+  try {
+    const userId = req.params.userId; // Get userId from headers
+console.log("userId--------------",userId)
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const notifications = await Notification.findAll({
+      where: { userId },
+      order: [['createdAt', 'DESC']],
+    });
+
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

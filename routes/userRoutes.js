@@ -98,6 +98,8 @@ router.get('/getShareFollowerList/:userId', userController.getShareFollowerList)
 
 router.get('/searchUsers', userController.searchUsers);
 
+router.get('/getNotifications/:userId', userController.getNotifications);
+
 module.exports = router;
 
 

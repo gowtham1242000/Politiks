@@ -25,6 +25,14 @@ const UserDetails = require('./UserDetail');
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+     userProfile: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  post: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
     });
     
     module.exports = Notification;

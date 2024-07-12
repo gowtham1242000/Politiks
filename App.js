@@ -106,8 +106,6 @@ io.to(`user_${notification.userId}`).emit('postLikeNotification', notification);
 });
 
 
-
-
 // Start the server
 const PORT = process.env.PORT || 2000;
 server.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
